@@ -14,17 +14,13 @@ def inspect_sample_node():
     run_id = latest_run["id"]
     print(f"Investigating latest run: {run_id}\n")
 
-    # 2. Get the 3rd node from the last (ordered by id descending)
-    nodes_result = supabase.table("nodes").select("*").eq("run_id", run_id).order("id", desc=True).limit(3).execute()
+    # 2. Get one node from this run
+    nodes_result = supabase.table("nodes").select("*").eq("run_id", run_id).limit(1).execute()
     if not nodes_result.data:
         print(f"No nodes found for run {run_id}.")
         return
     
-    if len(nodes_result.data) < 3:
-        print(f"Only {len(nodes_result.data)} nodes found. Inspecting the last one available.")
-        node = nodes_result.data[-1]
-    else:
-        node = nodes_result.data[2] # 3rd from the last
+    node = nodes_result.data[0]
     
     # 3. Print node information
     print("=== Sample Node Information ===")

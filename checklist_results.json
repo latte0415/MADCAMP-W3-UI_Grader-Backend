@@ -1,0 +1,123 @@
+{
+  "url": "https://madcamp-w2-decision-maker-web.vercel.app/signup",
+  "summary": {
+    "total_elements": 7,
+    "passed_count": 6,
+    "failed_count": 1
+  },
+  "details": {
+    "semantic_and_attribute": {
+      "pass": [
+        {
+          "tag": "button",
+          "text": "중복 확인",
+          "id": "",
+          "class": "signup-check-btn",
+          "type": "button"
+        },
+        {
+          "tag": "button",
+          "text": "회원가입",
+          "id": "",
+          "class": "login-primary-btn",
+          "type": "button"
+        },
+        {
+          "tag": "button",
+          "text": "Google 계정으로 계속하기",
+          "id": "",
+          "class": "google-login-btn",
+          "type": "button"
+        },
+        {
+          "tag": "a",
+          "text": "로그인으로 돌아가기",
+          "id": "",
+          "class": "login-link",
+          "type": "link"
+        },
+        {
+          "tag": "input",
+          "text": "E-mail",
+          "id": "",
+          "class": "login-input signup-email-input",
+          "type": "input"
+        },
+        {
+          "tag": "input",
+          "text": "사용하실 비밀번호를 입력해주세요.",
+          "id": "",
+          "class": "login-input",
+          "type": "input"
+        },
+        {
+          "tag": "input",
+          "text": "비밀번호를 한 번 더 입력해주세요.",
+          "id": "",
+          "class": "login-input",
+          "type": "input"
+        }
+      ],
+      "fail": []
+    },
+    "visual_rules": {
+      "pass": [
+        {
+          "tag": "button",
+          "text": "중복 확인",
+          "id": "",
+          "class": "signup-check-btn",
+          "type": "button"
+        },
+        {
+          "tag": "button",
+          "text": "회원가입",
+          "id": "",
+          "class": "login-primary-btn",
+          "type": "button"
+        },
+        {
+          "tag": "button",
+          "text": "Google 계정으로 계속하기",
+          "id": "",
+          "class": "google-login-btn",
+          "type": "button"
+        },
+        {
+          "tag": "input",
+          "text": "E-mail",
+          "id": "",
+          "class": "login-input signup-email-input",
+          "type": "input"
+        },
+        {
+          "tag": "input",
+          "text": "사용하실 비밀번호를 입력해주세요.",
+          "id": "",
+          "class": "login-input",
+          "type": "input"
+        },
+        {
+          "tag": "input",
+          "text": "비밀번호를 한 번 더 입력해주세요.",
+          "id": "",
+          "class": "login-input",
+          "type": "input"
+        }
+      ],
+      "fail": [
+        {
+          "tag": "a",
+          "text": "로그인으로 돌아가기",
+          "id": "",
+          "class": "login-link",
+          "type": "link",
+          "issues": [
+            "Interactive area too small: 121x22px (Min 44x44px)",
+            "Low text contrast: 2.77:1 (Min 4.5:1 recommended)"
+          ]
+        }
+      ]
+    }
+  }
+}
