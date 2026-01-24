@@ -83,7 +83,7 @@ CREATE TABLE edges (
     from_node_id UUID NOT NULL REFERENCES nodes(id) ON DELETE CASCADE,
     to_node_id UUID REFERENCES nodes(id) ON DELETE SET NULL,  -- 실패 케이스도 기록 가능 (NULL 허용)
 
-    action_type VARCHAR(20) NOT NULL CHECK (action_type IN ('click', 'fill', 'navigate', 'scroll', 'keyboard', 'wait')),
+    action_type VARCHAR(20) NOT NULL CHECK (action_type IN ('click', 'fill', 'navigate', 'scroll', 'keyboard', 'wait', 'hover')),
     action_target TEXT NOT NULL,  -- 가능하면 selector보다 role+name 같이 저장 (예: "button[name='로그인']")
     action_value TEXT DEFAULT '',  -- 입력 값 (fill 액션의 경우)
 

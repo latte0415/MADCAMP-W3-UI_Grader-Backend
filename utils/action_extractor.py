@@ -38,6 +38,10 @@ def _get_name(element: ElementHandle) -> str:
 
 def _build_selector(element: ElementHandle) -> str:
     tag = element.evaluate("el => el.tagName.toLowerCase()")
+    if tag == "a":
+        href = element.get_attribute("href")
+        if href:
+            return f"a[href='{href}']"
     element_id = element.get_attribute("id")
     if element_id:
         return f"{tag}#{element_id}"
@@ -46,8 +50,10 @@ def _build_selector(element: ElementHandle) -> str:
         return f"{tag}[name='{name_attr}']"
     class_attr = element.get_attribute("class")
     if class_attr:
-        first_class = class_attr.split()[0]
-        return f"{tag}.{first_class}"
+        class_list = class_attr.split()
+        if class_list:
+            first_class = class_list[0]
+            return f"{tag}.{first_class}"
     return tag
 
 
@@ -55,6 +61,8 @@ def _make_action(action_type: str, element: ElementHandle, action_value: Optiona
     role = _get_role(element) or ""
     name = _get_name(element)
     selector = _build_selector(element)
+    tag = element.evaluate("el => el.tagName.toLowerCase()")
+    href = element.get_attribute("href") if tag == "a" else None
     action_target = f"role={role} name={name}".strip()
     if not role and not name:
         action_target = selector
@@ -65,7 +73,9 @@ def _make_action(action_type: str, element: ElementHandle, action_value: Optiona
         "role": role,
         "name": name,
         "selector": selector,
-        "action_value": action_value or ""
+        "action_value": action_value or "",
+        "tag": tag,
+        "href": href
     }
 
 
@@ -87,7 +97,29 @@ def extract_actions_from_page(page: Page) -> List[Dict]:
     ]
     for selector in click_selectors:
         for element in page.query_selector_all(selector):
+            try:
+                if not element.is_visible():
+                    continue
+            except Exception:
+                pass
             actions.append(_make_action("click", element))
+
+    # Hover 후보 (메뉴/팝업 트리거로 추정되는 요소)
+    hover_selectors = [
+        "[aria-haspopup='true']",
+        "[data-hover]",
+        "[data-menu]",
+        "nav a",
+        "nav button"
+    ]
+    for selector in hover_selectors:
+        for element in page.query_selector_all(selector):
+            try:
+                if not element.is_visible():
+                    continue
+            except Exception:
+                pass
+            actions.append(_make_action("hover", element))
 
     # 입력 필드 fill
     fill_selectors = [
@@ -99,6 +131,11 @@ def extract_actions_from_page(page: Page) -> List[Dict]:
     ]
     for selector in fill_selectors:
         for element in page.query_selector_all(selector):
+            try:
+                if not element.is_visible():
+                    continue
+            except Exception:
+                pass
             actions.append(_make_action("fill", element))
 
     # 중복 제거 (action_type + action_target + action_value)

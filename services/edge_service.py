@@ -46,14 +46,42 @@ def perform_action(page: Page, action: Dict) -> Dict:
         role = action.get("role")
         name = action.get("name")
         selector = action.get("selector")
+        before_url = page.url
+        print(f"[perform_action] type={action_type} role={role} name={name} selector={selector} url={before_url}")
 
         if action_type == "click":
-            if role and name:
-                page.get_by_role(role, name=name).click()
-            elif selector:
-                page.click(selector)
+            href = action.get("href")
+            if selector:
+                page.wait_for_selector(selector, timeout=5000, state="attached")
+                locator = page.locator(selector).first
+                locator.evaluate("el => el.scrollIntoView({block: 'center'})")
+                try:
+                    locator.click(force=True, timeout=5000)
+                except Exception:
+                    # viewport 이슈 fallback: JS click
+                    locator.evaluate("el => el.click()")
+            elif role and name:
+                locator = page.get_by_role(role, name=name)
+                locator.evaluate("el => el.scrollIntoView({block: 'center'})")
+                try:
+                    locator.click(force=True, timeout=5000)
+                except Exception:
+                    locator.evaluate("el => el.click()")
             else:
                 raise Exception("click: 대상 요소를 찾을 수 없습니다.")
+            # URL 변경이 없으면 href로 직접 이동 시도
+            if href and page.url == before_url:
+                page.goto(href, wait_until="networkidle")
+            # SPA에서 URL 변화 없이 DOM만 바뀌는 케이스 대비
+            time.sleep(0.7)
+        elif action_type == "hover":
+            if role and name:
+                page.get_by_role(role, name=name).hover()
+            elif selector:
+                page.hover(selector)
+            else:
+                raise Exception("hover: 대상 요소를 찾을 수 없습니다.")
+            time.sleep(0.4)
         elif action_type == "fill":
             if selector:
                 page.fill(selector, action_value)
@@ -65,9 +93,12 @@ def perform_action(page: Page, action: Dict) -> Dict:
             page.wait_for_load_state("networkidle")
         else:
             raise Exception(f"알 수 없는 action_type: {action_type}")
+        after_url = page.url
+        print(f"[perform_action] done url={after_url}")
     except Exception as e:
         outcome = "fail"
         error_msg = str(e)
+        print(f"[perform_action] error={error_msg}")
 
     latency_ms = int((time.time() - start_time) * 1000)
     return {"outcome": outcome, "latency_ms": latency_ms, "error_msg": error_msg}
@@ -135,6 +166,9 @@ def perform_and_record_edge(
     if action_result["outcome"] == "success":
         to_node = create_or_get_node(run_id, page)
         to_node_id = UUID(to_node["id"])
+        print(f"[perform_and_record_edge] to_node_id={to_node_id}")
+    else:
+        print("[perform_and_record_edge] action failed; skip to_node")
 
     if depth_diff_type is None and before_node:
         depth_diff_type = classify_change(before_node, to_node, page)
