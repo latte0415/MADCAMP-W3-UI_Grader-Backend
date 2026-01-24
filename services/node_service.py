@@ -72,6 +72,49 @@ def _collect_css_snapshot(page: Page) -> str:
     )
 
 
+# NOTE: 접근성 스냅샷 수집은 현재 사용하지 않습니다.
+# def _collect_a11y_snapshot(page: Page) -> Dict:
+#     """
+#     접근성 스냅샷 수집 (실패 시 재시도)
+#     """
+#     try:
+#         page.wait_for_load_state("domcontentloaded", timeout=5000)
+#     except Exception:
+#         # load state 대기 실패는 무시하고 계속 시도
+#         pass
+#
+#     def _snapshot_via_playwright() -> Dict:
+#         snapshot = page.accessibility.snapshot(interesting_only=False)
+#         return snapshot or {"error": "accessibility snapshot empty"}
+#
+#     def _snapshot_via_cdp() -> Dict:
+#         session = page.context.new_cdp_session(page)
+#         result = session.send("Accessibility.getFullAXTree")
+#         return result or {"error": "accessibility snapshot empty"}
+#
+#     # 1) Playwright API 우선 시도 (버전에 따라 attribute가 없을 수 있음)
+#     if hasattr(page, "accessibility"):
+#         try:
+#             return _snapshot_via_playwright()
+#         except Exception:
+#             pass
+#
+#     # 2) CDP fallback (Chromium 계열에서만 동작)
+#     try:
+#         return _snapshot_via_cdp()
+#     except Exception:
+#         try:
+#             page.wait_for_timeout(300)
+#             if hasattr(page, "accessibility"):
+#                 return _snapshot_via_playwright()
+#             return _snapshot_via_cdp()
+#         except Exception as retry_error:
+#             return {
+#                 "error": "accessibility snapshot failed",
+#                 "error_detail": str(retry_error)
+#             }
+
+
 def create_or_get_node(run_id: UUID, page: Page) -> Dict:
     """
     노드를 생성하거나 기존 노드를 반환합니다.
@@ -173,11 +216,8 @@ def create_or_get_node(run_id: UUID, page: Page) -> Dict:
                 "text/css"
             )
             
-            # 접근성 스냅샷 (JSON)
-            try:
-                a11y_snapshot = page.accessibility.snapshot()
-            except Exception:
-                a11y_snapshot = {"error": "accessibility snapshot failed"}
+            # 접근성 정보 스냅샷 (a11y_info 방식, JSON)
+            a11y_snapshot = a11y_info
             a11y_ref = _upload_artifact(
                 supabase,
                 f"{base_path}/a11y_snapshot.json",

@@ -75,7 +75,7 @@ def collect_a11y_info(page: Page) -> List[str]:
         page: Playwright Page 객체
     
     Returns:
-        접근성 정보 리스트 (각 요소는 "role|label|name" 형식)
+        접근성 정보 리스트 (각 요소는 "role|label|name|tag|type|aria" 형식)
     """
     a11y_info = []
     
@@ -87,6 +87,29 @@ def collect_a11y_info(page: Page) -> List[str]:
             role = element.get_attribute("role") or ""
             label = element.get_attribute("aria-label") or ""
             labelledby = element.get_attribute("aria-labelledby") or ""
+            tag = (element.evaluate("el => el.tagName") or "").lower()
+            input_type = element.get_attribute("type") or ""
+            aria_parts = []
+            for key in [
+                "aria-hidden",
+                "aria-disabled",
+                "aria-busy",
+                "aria-live",
+                "aria-current",
+                "aria-pressed",
+                "aria-readonly",
+                "aria-required",
+                "aria-invalid",
+                "aria-expanded",
+                "aria-checked",
+                "aria-selected",
+                "aria-haspopup",
+                "aria-controls"
+            ]:
+                value = element.get_attribute(key)
+                if value is not None:
+                    aria_parts.append(f"{key}={value}")
+            aria_summary = ",".join(aria_parts)
             
             # 텍스트 콘텐츠 가져오기 (처음 50자만)
             try:
@@ -104,8 +127,8 @@ def collect_a11y_info(page: Page) -> List[str]:
                     pass
             
             # 의미있는 정보가 있을 때만 추가
-            if role or label or name:
-                a11y_info.append(f"{role}|{label}|{name}")
+            if role or label or name or tag or input_type or aria_summary:
+                a11y_info.append(f"{role}|{label}|{name}|{tag}|{input_type}|{aria_summary}")
         except:
             # 요소 접근 실패 시 스킵
             continue

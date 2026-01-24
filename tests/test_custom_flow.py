@@ -77,12 +77,16 @@ def test_action_list(url: str) -> None:
         sys.exit(1)
 
 
-def test_pricing_then_logo() -> None:
-    """2) pricing 클릭 → Open main menu 클릭"""
-    url = "https://supabase.com"
+def _save_screenshot(page, path: Path) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    page.screenshot(path=str(path), full_page=True)
+
+
+def test_custom_flow(url: str) -> None:
+    """2) 커스텀 플로우 테스트"""
 
     print("=" * 50)
-    print("pricing → Open main menu 클릭 테스트")
+    print(f"커스텀 플로우 테스트: {url}")
     print("=" * 50)
 
     try:
@@ -110,36 +114,49 @@ def test_pricing_then_logo() -> None:
             else:
                 print("✗ CSS 스냅샷 로드 실패 또는 비어있음")
 
-            # pricing 클릭 (액션 리스트에서 선택)
+            # 첫 번째 액션 (액션 리스트에서 번호 입력으로 선택)
             actions = extract_actions_from_page(page)
             if not actions:
                 raise Exception("추출된 액션이 없습니다.")
 
-            pricing_idx = int(os.getenv("PRICING_ACTION_INDEX", "0"))
-            if pricing_idx < 0 or pricing_idx >= len(actions):
-                raise Exception(f"PRICING_ACTION_INDEX 범위 오류: {pricing_idx}")
-            pricing_action = actions[pricing_idx]
-            print(f"✓ pricing_action 선택: {pricing_action['action_target']} (idx={pricing_idx})")
-            edge1 = perform_and_record_edge(UUID(run_id), UUID(home_node["id"]), page, pricing_action)
-            print(f"✓ pricing edge: {edge1['id']} (depth_diff_type={edge1.get('depth_diff_type')})")
+            action1_input = input("첫 번째 액션 인덱스 입력 (기본값 0): ").strip()
+            if not action1_input:
+                action1_input = os.getenv("ACTION1_INDEX", "0")
+            action1_idx = int(action1_input)
+            if action1_idx < 0 or action1_idx >= len(actions):
+                raise Exception(f"ACTION1_INDEX 범위 오류: {action1_idx}")
+            action1 = actions[action1_idx]
+            print(f"✓ action1 선택: {action1['action_target']} (idx={action1_idx})")
+            print(f"  action1 detail: type={action1['action_type']} role={action1.get('role')} name={action1.get('name')} selector={action1.get('selector')}")
+            _save_screenshot(page, Path("artifacts") / "custom_flow" / "action1_before.png")
+            edge1 = perform_and_record_edge(UUID(run_id), UUID(home_node["id"]), page, action1)
+            _save_screenshot(page, Path("artifacts") / "custom_flow" / "action1_after.png")
+            print(f"✓ action1 edge: {edge1['id']} (depth_diff_type={edge1.get('depth_diff_type')})")
 
-            pricing_node = create_or_get_node(run_id, page)
-            print(f"✓ pricing_node: {pricing_node['id']}")
+            action1_node = create_or_get_node(run_id, page)
+            print(f"✓ action1_node: {action1_node['id']}")
 
-            # Open main menu 클릭
-            menu_action = {
-                "action_type": "click",
-                "role": "button",
-                "name": "Open main menu",
-                "selector": "button[aria-label='Open main menu'], button[aria-expanded]",
-                "action_target": "role=button name=Open main menu",
-                "action_value": ""
-            }
-            edge2 = perform_and_record_edge(UUID(run_id), UUID(pricing_node["id"]), page, menu_action)
-            print(f"✓ menu edge: {edge2['id']} (depth_diff_type={edge2.get('depth_diff_type')})")
+            # 두 번째 액션 (액션 리스트에서 번호 입력으로 선택)
+            action2_list = extract_actions_from_page(page)
+            if not action2_list:
+                raise Exception("추출된 액션이 없습니다. (action2)")
 
-            menu_node = create_or_get_node(run_id, page)
-            print(f"✓ menu_node: {menu_node['id']}")
+            action2_input = input("두 번째 액션 인덱스 입력 (기본값 0): ").strip()
+            if not action2_input:
+                action2_input = os.getenv("ACTION2_INDEX", "0")
+            action2_idx = int(action2_input)
+            if action2_idx < 0 or action2_idx >= len(action2_list):
+                raise Exception(f"ACTION2_INDEX 범위 오류: {action2_idx}")
+            action2 = action2_list[action2_idx]
+            print(f"✓ action2 선택: {action2['action_target']} (idx={action2_idx})")
+            print(f"  action2 detail: type={action2['action_type']} role={action2.get('role')} name={action2.get('name')} selector={action2.get('selector')}")
+            _save_screenshot(page, Path("artifacts") / "custom_flow" / "action2_before.png")
+            edge2 = perform_and_record_edge(UUID(run_id), UUID(action1_node["id"]), page, action2)
+            _save_screenshot(page, Path("artifacts") / "custom_flow" / "action2_after.png")
+            print(f"✓ action2 edge: {edge2['id']} (depth_diff_type={edge2.get('depth_diff_type')})")
+
+            action2_node = create_or_get_node(run_id, page)
+            print(f"✓ action2_node: {action2_node['id']}")
 
             browser.close()
 
@@ -153,6 +170,6 @@ def test_pricing_then_logo() -> None:
 
 if __name__ == "__main__":
     # 1) 액션 리스트 추출 (공통)
-    test_action_list(os.getenv("TEST_ACTION_LIST_URL", "https://supabase.com"))
-    # 2) pricing → logo
-    # test_pricing_then_logo()
+    test_action_list(os.getenv("TEST_ACTION_LIST_URL", "https://urround.com/"))
+    # 2) 커스텀 플로우 테스트
+    test_custom_flow(os.getenv("TEST_ACTION_LIST_URL", "https://urround.com/"))
