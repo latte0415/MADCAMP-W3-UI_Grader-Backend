@@ -42,9 +42,15 @@ CREATE TABLE nodes (
 
     -- 원본 아티팩트 경로 (파일 저장소 참조)
     dom_snapshot_ref TEXT,  -- DOM 스냅샷 파일 경로
+    css_snapshot_ref TEXT,  -- CSS 스냅샷 파일 경로
     a11y_snapshot_ref TEXT,  -- 접근성 스냅샷 파일 경로
     screenshot_ref TEXT,  -- 스크린샷 파일 경로
     storage_ref TEXT,  -- storageState 원본 파일 경로
+
+    -- 그래프 뎁스 메타 (노드 기준)
+    route_depth INT DEFAULT 0,
+    modal_depth INT DEFAULT 0,
+    interaction_depth INT DEFAULT 0,
 
     created_at TIMESTAMPTZ DEFAULT NOW(),
 
@@ -79,7 +85,7 @@ CREATE TABLE edges (
 
     action_type VARCHAR(20) NOT NULL CHECK (action_type IN ('click', 'fill', 'navigate', 'scroll', 'keyboard', 'wait')),
     action_target TEXT NOT NULL,  -- 가능하면 selector보다 role+name 같이 저장 (예: "button[name='로그인']")
-    action_value TEXT,  -- 입력 값 (fill 액션의 경우)
+    action_value TEXT DEFAULT '',  -- 입력 값 (fill 액션의 경우)
 
     cost NUMERIC NOT NULL DEFAULT 1,  -- 액션 비용 (Interaction Efficiency 평가용)
     latency_ms INT,  -- action 수행~안정화까지 소요 시간 (System Latency 평가용)
@@ -92,10 +98,13 @@ CREATE TABLE edges (
     dom_diff_ref TEXT,  -- DOM 변화 diff 파일 경로
     network_summary_ref TEXT,  -- 네트워크 요약 정보 파일 경로
 
+    -- 그래프 확장/뎁스 변화 타입
+    depth_diff_type VARCHAR(30) CHECK (depth_diff_type IN ('same_node', 'interaction_only', 'new_page', 'modal_overlay', 'drawer')),
+
     created_at TIMESTAMPTZ DEFAULT NOW(),
 
     CONSTRAINT edges_dedupe UNIQUE (
-        run_id, from_node_id, to_node_id, action_type, action_target, COALESCE(action_value, '')
+        run_id, from_node_id, to_node_id, action_type, action_target, action_value
     )
 );
 
@@ -181,7 +190,7 @@ FROM nodes
 WHERE run_id = $run_id
   AND url_normalized = $url_normalized
   AND a11y_hash = $a11y_hash
-  AND state_hash = $state_hash;  -- auth_state + storage_fingerprint의 해시
+    AND state_hash = $state_hash;  -- auth_state + storage_fingerprint의 해시
 ```
 
 ### 실패한 액션 조회 (Error reporting 평가용)

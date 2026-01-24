@@ -38,6 +38,32 @@ def _upload_artifact(supabase, path: str, content: bytes, content_type: str) -> 
     return f"{STORAGE_BUCKET}/{path}"
 
 
+def _collect_css_snapshot(page: Page) -> str:
+    """
+    페이지에서 접근 가능한 CSS 텍스트를 수집합니다.
+    """
+    return page.evaluate(
+        """
+        () => {
+            const cssTexts = [];
+            for (const sheet of Array.from(document.styleSheets || [])) {
+                try {
+                    const rules = sheet.cssRules;
+                    if (!rules) continue;
+                    for (const rule of Array.from(rules)) {
+                        cssTexts.push(rule.cssText);
+                    }
+                } catch (e) {
+                    // CORS 등으로 접근 불가한 스타일시트는 건너뜀
+                    continue;
+                }
+            }
+            return cssTexts.join("\\n");
+        }
+        """
+    )
+
+
 def create_or_get_node(run_id: UUID, page: Page) -> Dict:
     """
     노드를 생성하거나 기존 노드를 반환합니다.
@@ -95,7 +121,8 @@ def create_or_get_node(run_id: UUID, page: Page) -> Dict:
         "dom_snapshot_ref": None,
         "a11y_snapshot_ref": None,
         "screenshot_ref": None,
-        "storage_ref": None
+        "storage_ref": None,
+        "css_snapshot_ref": None
     }
     
     # 8. Supabase에 삽입 시도
@@ -127,6 +154,15 @@ def create_or_get_node(run_id: UUID, page: Page) -> Dict:
                 f"{base_path}/dom_snapshot.html",
                 dom_snapshot.encode("utf-8"),
                 "text/html"
+            )
+
+            # CSS 스냅샷 (CSS)
+            css_snapshot = _collect_css_snapshot(page)
+            css_ref = _upload_artifact(
+                supabase,
+                f"{base_path}/styles.css",
+                css_snapshot.encode("utf-8"),
+                "text/css"
             )
             
             # 접근성 스냅샷 (JSON)
@@ -162,6 +198,7 @@ def create_or_get_node(run_id: UUID, page: Page) -> Dict:
             # refs 업데이트
             update_result = supabase.table("nodes").update({
                 "dom_snapshot_ref": dom_ref,
+                "css_snapshot_ref": css_ref,
                 "a11y_snapshot_ref": a11y_ref,
                 "screenshot_ref": screenshot_ref,
                 "storage_ref": storage_ref
@@ -217,6 +254,7 @@ def get_node_with_artifacts(node_id: UUID) -> Optional[Dict]:
     
     artifacts = {
         "dom_snapshot_html": None,
+        "css_snapshot": None,
         "a11y_snapshot": None,
         "screenshot_bytes": None,
         "storage_state": None
@@ -226,6 +264,11 @@ def get_node_with_artifacts(node_id: UUID) -> Optional[Dict]:
     if node.get("dom_snapshot_ref"):
         dom_bytes = download_storage_file(node["dom_snapshot_ref"])
         artifacts["dom_snapshot_html"] = dom_bytes.decode("utf-8", errors="replace")
+
+    # CSS 스냅샷 (CSS)
+    if node.get("css_snapshot_ref"):
+        css_bytes = download_storage_file(node["css_snapshot_ref"])
+        artifacts["css_snapshot"] = css_bytes.decode("utf-8", errors="replace")
     
     # 접근성 스냅샷 (JSON)
     if node.get("a11y_snapshot_ref"):

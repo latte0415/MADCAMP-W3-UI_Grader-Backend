@@ -1,10 +1,16 @@
 """노드 삽입 테스트 스크립트"""
+import os
 import sys
+from pathlib import Path
 from uuid import uuid4
 from playwright.sync_api import sync_playwright
 
+ROOT_DIR = Path(__file__).resolve().parents[1]
+if str(ROOT_DIR) not in sys.path:
+    sys.path.append(str(ROOT_DIR))
+
 from infra.supabase import get_client
-from services.node_service import create_or_get_node
+from services.node_service import create_or_get_node, get_node_with_artifacts
 
 
 def create_test_run(target_url: str, start_url: str) -> str:
@@ -38,8 +44,8 @@ def create_test_run(target_url: str, start_url: str) -> str:
 def test_node_insert():
     """노드 삽입 테스트"""
     # 테스트 URL
-    target_url = "https://madcamp-w2-decision-maker-web.vercel.app"
-    start_url = "https://madcamp-w2-decision-maker-web.vercel.app/login"
+    target_url = os.getenv("TEST_TARGET_URL", "https://madcamp-w2-decision-maker-web.vercel.app")
+    start_url = os.getenv("TEST_START_URL", "https://madcamp-w2-decision-maker-web.vercel.app/login")
     
     print("=" * 50)
     print("노드 삽입 테스트 시작")
@@ -77,9 +83,22 @@ def test_node_insert():
             print(f"   A11y Hash: {node['a11y_hash'][:16]}...")
             print(f"   State Hash: {node['state_hash'][:16]}...")
             print(f"   Auth State: {node['auth_state']}")
+            print(f"   DOM Snapshot Ref: {node.get('dom_snapshot_ref')}")
+            print(f"   CSS Snapshot Ref: {node.get('css_snapshot_ref')}")
             
-            # 4. 중복 테스트 (같은 페이지에서 다시 노드 생성)
-            print(f"\n4. 중복 노드 테스트 (같은 페이지에서 다시 생성)...")
+            # 4. 아티팩트 확인
+            print(f"\n4. 아티팩트 조회 중...")
+            node_with_artifacts = get_node_with_artifacts(node["id"])
+            css_snapshot = None
+            if node_with_artifacts and node_with_artifacts.get("artifacts"):
+                css_snapshot = node_with_artifacts["artifacts"].get("css_snapshot")
+            if css_snapshot:
+                print(f"   ✓ CSS 스냅샷 로드됨 (length={len(css_snapshot)})")
+            else:
+                print(f"   ✗ CSS 스냅샷 로드 실패 또는 비어있음")
+
+            # 5. 중복 테스트 (같은 페이지에서 다시 노드 생성)
+            print(f"\n5. 중복 노드 테스트 (같은 페이지에서 다시 생성)...")
             node2 = create_or_get_node(run_id, page)
             if node['id'] == node2['id']:
                 print(f"   ✓ 중복 노드가 올바르게 처리됨 (같은 ID 반환)")
