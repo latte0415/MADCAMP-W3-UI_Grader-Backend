@@ -47,3 +47,29 @@ def classify_change(
         return "same_node"
 
     return "interaction_only"
+
+
+def compute_next_depths(before_node: Optional[Dict], depth_diff_type: str) -> Dict[str, int]:
+    """
+    depth_diff_type에 따라 다음 노드의 depth를 계산합니다.
+    """
+    base_route = int((before_node or {}).get("route_depth") or 0)
+    base_modal = int((before_node or {}).get("modal_depth") or 0)
+    base_interaction = int((before_node or {}).get("interaction_depth") or 0)
+
+    route_depth = base_route
+    modal_depth = base_modal
+    interaction_depth = base_interaction
+
+    if depth_diff_type == "new_page":
+        route_depth += 1
+    elif depth_diff_type in ("modal_overlay", "drawer"):
+        modal_depth += 1
+    elif depth_diff_type == "interaction_only":
+        interaction_depth += 1
+
+    return {
+        "route_depth": route_depth,
+        "modal_depth": modal_depth,
+        "interaction_depth": interaction_depth
+    }

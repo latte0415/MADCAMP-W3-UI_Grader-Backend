@@ -1,0 +1,5 @@
+# 사용자 입력
+{input_prompt}
+
+# 웹 검색 에이전트 실행 결과
+{web_search_result}

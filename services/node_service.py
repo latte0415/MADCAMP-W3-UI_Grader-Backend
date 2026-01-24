@@ -1,6 +1,6 @@
 """노드 삽입 서비스"""
 import json
-from typing import Dict, Optional
+from typing import Dict, Optional, Tuple, Union
 from uuid import UUID
 from playwright.sync_api import Page
 
@@ -107,7 +107,12 @@ def _collect_css_snapshot(page: Page) -> str:
 #             }
 
 
-def create_or_get_node(run_id: UUID, page: Page) -> Dict:
+def create_or_get_node(
+    run_id: UUID,
+    page: Page,
+    depths: Optional[Dict[str, int]] = None,
+    return_created: bool = False
+) -> Union[Dict, Tuple[Dict, bool]]:
     """
     노드를 생성하거나 기존 노드를 반환합니다.
     
@@ -119,7 +124,7 @@ def create_or_get_node(run_id: UUID, page: Page) -> Dict:
         page: Playwright Page 객체
     
     Returns:
-        노드 정보 딕셔너리 (id 포함)
+        노드 정보 딕셔너리 또는 (노드, created 여부)
     
     Raises:
         Exception: Supabase 작업 실패 시
@@ -167,6 +172,12 @@ def create_or_get_node(run_id: UUID, page: Page) -> Dict:
         "storage_ref": None,
         "css_snapshot_ref": None
     }
+    if depths:
+        node_data.update({
+            "route_depth": depths.get("route_depth"),
+            "modal_depth": depths.get("modal_depth"),
+            "interaction_depth": depths.get("interaction_depth")
+        })
     
     # 8. Supabase에 삽입 시도
     supabase = get_client()
@@ -178,7 +189,7 @@ def create_or_get_node(run_id: UUID, page: Page) -> Dict:
         ).eq("a11y_hash", a11y_hash).eq("state_hash", state_hash).execute()
         
         if existing.data and len(existing.data) > 0:
-            return existing.data[0]
+            return (existing.data[0], False) if return_created else existing.data[0]
         
         # 새 노드 생성
         result = supabase.table("nodes").insert(node_data).execute()
@@ -245,14 +256,30 @@ def create_or_get_node(run_id: UUID, page: Page) -> Dict:
             }).eq("id", node_id).execute()
             
             if update_result.data and len(update_result.data) > 0:
-                return update_result.data[0]
-            return node
+                return (update_result.data[0], True) if return_created else update_result.data[0]
+            return (node, True) if return_created else node
         else:
             raise Exception("노드 삽입 실패: 데이터가 반환되지 않았습니다.")
             
     except Exception as e:
         error_msg = str(e)
         raise Exception(f"노드 삽입 실패: {error_msg}")
+
+
+def update_node_depths(node_id: UUID, depths: Dict[str, int]) -> Dict:
+    """
+    노드 depth 필드 업데이트
+    """
+    supabase = get_client()
+    result = supabase.table("nodes").update({
+        "route_depth": depths.get("route_depth"),
+        "modal_depth": depths.get("modal_depth"),
+        "interaction_depth": depths.get("interaction_depth")
+    }).eq("id", str(node_id)).execute()
+
+    if result.data and len(result.data) > 0:
+        return result.data[0]
+    raise Exception("노드 depth 업데이트 실패: 데이터가 반환되지 않았습니다.")
 
 
 def get_node_by_id(node_id: UUID) -> Optional[Dict]:

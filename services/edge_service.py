@@ -5,8 +5,8 @@ from uuid import UUID
 from playwright.sync_api import Page
 
 from infra.supabase import get_client
-from services.node_service import create_or_get_node, get_node_by_id
-from utils.graph_classifier import classify_change
+from services.node_service import create_or_get_node, get_node_by_id, update_node_depths
+from utils.graph_classifier import classify_change, compute_next_depths
 
 
 def is_duplicate_action(run_id: UUID, from_node_id: UUID, action: Dict) -> Optional[Dict]:
@@ -163,8 +163,9 @@ def perform_and_record_edge(
 
     to_node_id = None
     to_node = None
+    to_node_created = False
     if action_result["outcome"] == "success":
-        to_node = create_or_get_node(run_id, page)
+        to_node, to_node_created = create_or_get_node(run_id, page, return_created=True)
         to_node_id = UUID(to_node["id"])
         print(f"[perform_and_record_edge] to_node_id={to_node_id}")
     else:
@@ -172,6 +173,10 @@ def perform_and_record_edge(
 
     if depth_diff_type is None and before_node:
         depth_diff_type = classify_change(before_node, to_node, page)
+
+    if to_node_created and before_node and depth_diff_type:
+        depths = compute_next_depths(before_node, depth_diff_type)
+        update_node_depths(to_node_id, depths)
 
     return record_edge(
         run_id=run_id,
