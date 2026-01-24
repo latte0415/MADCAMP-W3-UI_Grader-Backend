@@ -3,6 +3,14 @@ import json
 from typing import Dict, Optional
 from uuid import UUID
 from playwright.sync_api import Page
+import os 
+import sys 
+
+current_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.dirname(current_dir)
+if project_root not in sys.path:
+    sys.path.append(project_root)
+
 
 from infra.supabase import get_client, download_storage_file
 from utils.hash_generator import (
