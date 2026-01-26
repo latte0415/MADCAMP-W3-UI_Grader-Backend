@@ -1,17 +1,19 @@
 """그래프 변화 타입 분류 유틸리티"""
 from typing import Dict, Optional
-from playwright.sync_api import Page
+from playwright.async_api import Page
 
 
-def _has_modal(page: Page) -> bool:
-    return bool(page.query_selector("[role='dialog'], [aria-modal='true']"))
+async def _has_modal(page: Page) -> bool:
+    element = await page.query_selector("[role='dialog'], [aria-modal='true']")
+    return bool(element)
 
 
-def _has_drawer(page: Page) -> bool:
-    return bool(page.query_selector("[data-drawer], [data-sidebar], [aria-expanded='true']"))
+async def _has_drawer(page: Page) -> bool:
+    element = await page.query_selector("[data-drawer], [data-sidebar], [aria-expanded='true']")
+    return bool(element)
 
 
-def classify_change(
+async def classify_change(
     before_node: Dict,
     after_node: Optional[Dict],
     page: Page
@@ -31,9 +33,9 @@ def classify_change(
         return "new_page"
 
     # overlay/drawer 힌트 우선
-    if _has_modal(page):
+    if await _has_modal(page):
         return "modal_overlay"
-    if _has_drawer(page):
+    if await _has_drawer(page):
         return "drawer"
 
     # 동일 노드인지 확인

@@ -2,7 +2,7 @@
 import time
 from typing import Dict, Optional
 from uuid import UUID
-from playwright.sync_api import Page
+from playwright.async_api import Page
 
 from repositories import edge_repository
 from repositories import node_repository
@@ -44,7 +44,7 @@ class EdgeService:
             action_value
         )
     
-    def perform_action(self, page: Page, action: Dict) -> Dict:
+    async def perform_action(self, page: Page, action: Dict) -> Dict:
         """
         액션 수행
         
@@ -71,45 +71,45 @@ class EdgeService:
             if action_type == "click":
                 href = action.get("href")
                 if selector:
-                    page.wait_for_selector(selector, timeout=5000, state="attached")
+                    await page.wait_for_selector(selector, timeout=5000, state="attached")
                     locator = page.locator(selector).first
-                    locator.evaluate("el => el.scrollIntoView({block: 'center'})")
+                    await locator.evaluate("el => el.scrollIntoView({block: 'center'})")
                     try:
-                        locator.click(force=True, timeout=5000)
+                        await locator.click(force=True, timeout=5000)
                     except Exception:
                         # viewport 이슈 fallback: JS click
-                        locator.evaluate("el => el.click()")
+                        await locator.evaluate("el => el.click()")
                 elif role and name:
                     locator = page.get_by_role(role, name=name)
-                    locator.evaluate("el => el.scrollIntoView({block: 'center'})")
+                    await locator.evaluate("el => el.scrollIntoView({block: 'center'})")
                     try:
-                        locator.click(force=True, timeout=5000)
+                        await locator.click(force=True, timeout=5000)
                     except Exception:
-                        locator.evaluate("el => el.click()")
+                        await locator.evaluate("el => el.click()")
                 else:
                     raise Exception("click: 대상 요소를 찾을 수 없습니다.")
                 # URL 변경이 없으면 href로 직접 이동 시도
                 if href and page.url == before_url:
-                    page.goto(href, wait_until="networkidle")
+                    await page.goto(href, wait_until="networkidle")
                 # SPA에서 URL 변화 없이 DOM만 바뀌는 케이스 대비
-                time.sleep(0.7)
+                await page.wait_for_timeout(700)
             elif action_type == "hover":
                 if role and name:
-                    page.get_by_role(role, name=name).hover()
+                    await page.get_by_role(role, name=name).hover()
                 elif selector:
-                    page.hover(selector)
+                    await page.hover(selector)
                 else:
                     raise Exception("hover: 대상 요소를 찾을 수 없습니다.")
-                time.sleep(0.4)
+                await page.wait_for_timeout(400)
             elif action_type == "fill":
                 if selector:
-                    page.fill(selector, action_value)
+                    await page.fill(selector, action_value)
                 else:
                     raise Exception("fill: 대상 요소를 찾을 수 없습니다.")
             elif action_type == "navigate":
-                page.goto(action_value, wait_until="networkidle")
+                await page.goto(action_value, wait_until="networkidle")
             elif action_type == "wait":
-                page.wait_for_load_state("networkidle")
+                await page.wait_for_load_state("networkidle")
             else:
                 raise Exception(f"알 수 없는 action_type: {action_type}")
             after_url = page.url
@@ -170,7 +170,7 @@ class EdgeService:
         
         return self.edge_repo.create_edge(edge_data)
     
-    def perform_and_record_edge(
+    async def perform_and_record_edge(
         self,
         run_id: UUID,
         from_node_id: UUID,
@@ -202,18 +202,23 @@ class EdgeService:
         else:
             before_node = self.node_repo.get_node_by_id(from_node_id)
         
-        action_result = self.perform_action(page, action)
+        action_result = await self.perform_action(page, action)
         
         to_node_id = None
         to_node = None
         to_node_created = False
         if action_result["outcome"] == "success":
             if self.node_service:
-                to_node, to_node_created = self.node_service.create_or_get_node(run_id, page, return_created=True)
+                result = await self.node_service.create_or_get_node(run_id, page, return_created=True)
+                if isinstance(result, tuple):
+                    to_node, to_node_created = result
+                else:
+                    to_node = result
+                    to_node_created = False
             else:
                 # node_service가 없으면 직접 호출 (하위 호환성)
                 from services.node_service import create_or_get_node
-                result = create_or_get_node(run_id, page, return_created=True)
+                result = await create_or_get_node(run_id, page, return_created=True)
                 if isinstance(result, tuple):
                     to_node, to_node_created = result
                 else:
@@ -226,7 +231,7 @@ class EdgeService:
             print("[perform_and_record_edge] action failed; skip to_node")
         
         if depth_diff_type is None and before_node:
-            depth_diff_type = classify_change(before_node, to_node, page)
+            depth_diff_type = await classify_change(before_node, to_node, page)
         
         if to_node_created and before_node and depth_diff_type:
             depths = compute_next_depths(before_node, depth_diff_type)
@@ -264,9 +269,9 @@ def is_duplicate_action(run_id: UUID, from_node_id: UUID, action: Dict) -> Optio
     return _get_edge_service().is_duplicate_action(run_id, from_node_id, action)
 
 
-def perform_action(page: Page, action: Dict) -> Dict:
+async def perform_action(page: Page, action: Dict) -> Dict:
     """하위 호환성을 위한 함수 래퍼"""
-    return _get_edge_service().perform_action(page, action)
+    return await _get_edge_service().perform_action(page, action)
 
 
 def record_edge(
@@ -285,7 +290,7 @@ def record_edge(
     )
 
 
-def perform_and_record_edge(
+async def perform_and_record_edge(
     run_id: UUID,
     from_node_id: UUID,
     page: Page,
@@ -293,6 +298,6 @@ def perform_and_record_edge(
     depth_diff_type: Optional[str] = None
 ) -> Dict:
     """하위 호환성을 위한 함수 래퍼"""
-    return _get_edge_service().perform_and_record_edge(
+    return await _get_edge_service().perform_and_record_edge(
         run_id, from_node_id, page, action, depth_diff_type
     )

@@ -3,7 +3,7 @@ import os
 import asyncio
 import base64
 from pathlib import Path
-from playwright.sync_api import sync_playwright
+from playwright.async_api import async_playwright
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
 if str(ROOT_DIR) not in sys.path:
@@ -52,22 +52,23 @@ async def test_ai_skeleton_with_calculator_tools() -> None:
     response = await ai_service.get_ai_response_with_calculator_tools()
     print(response)
 
-def _create_node_with_playwright(run_id: str, start_url: str) -> dict:
-    """별도 스레드에서 실행할 sync 함수: Playwright로 노드 생성"""
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        context = browser.new_context(
+async def _create_node_with_playwright(run_id: str, start_url: str) -> dict:
+    """Playwright로 노드 생성"""
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=True)
+        context = await browser.new_context(
             user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
             viewport={'width': 1280, 'height': 720}
         )
-        page = context.new_page()
+        page = await context.new_page()
         
-        page.goto(start_url, wait_until="networkidle")
+        await page.goto(start_url, wait_until="networkidle")
         
         # 노드 생성
-        node = create_or_get_node(run_id, page)
+        from uuid import UUID
+        node = await create_or_get_node(UUID(run_id), page)
         
-        browser.close()
+        await browser.close()
         return node
 
 
@@ -89,9 +90,9 @@ async def test_ai_photo_test() -> None:
         run_id = create_test_run(target_url, start_url)
         print(f"   ✓ Run ID: {run_id}")
         
-        # 2. Playwright로 페이지 열기 및 노드 생성 (별도 스레드에서 실행)
+        # 2. Playwright로 페이지 열기 및 노드 생성
         print(f"\n2. 페이지 로드 및 노드 생성 중...")
-        node = await asyncio.to_thread(_create_node_with_playwright, run_id, start_url)
+        node = await _create_node_with_playwright(run_id, start_url)
         print(f"   ✓ 페이지 로드 완료")
         print(f"   ✓ 노드 생성 완료: {node['id']}")
         node_url = node['url']
@@ -164,9 +165,9 @@ async def test_update_run_memory() -> None:
         from uuid import UUID
         run_id = UUID(run_id_str)
         
-        # 2. Playwright로 페이지 열기 및 노드 생성 (별도 스레드에서 실행)
+        # 2. Playwright로 페이지 열기 및 노드 생성
         print(f"\n2. 페이지 로드 및 노드 생성 중...")
-        node = await asyncio.to_thread(_create_node_with_playwright, run_id_str, start_url)
+        node = await _create_node_with_playwright(run_id_str, start_url)
         print(f"   ✓ 페이지 로드 완료")
         print(f"   ✓ 노드 생성 완료: {node['id']}")
         node_url = node['url']

@@ -49,4 +49,11 @@ def update_memory(content: dict) -> dict:
         return {"error": "content는 비어있지 않은 딕셔너리여야 합니다."}
     return update_run_memory(run_id, content)
 
+# @tool # 현재 처리할 수 없는 Input 액션을 pending action에 보관
+# def save_action
+
+# @tool # pending action에 보관할 필요 없이, 현재 처리할 수 있는 Input 액션만 그 입력값과 함께 반환
+# def filter_action
+
 update_run_memory_tools = [view_memory, update_memory]
+# filter_action_tools = [view_memory, save_action, filter_action]

@@ -2,7 +2,7 @@
 import json
 from typing import Dict, Optional, Tuple, Union
 from uuid import UUID
-from playwright.sync_api import Page
+from playwright.async_api import Page
 
 from infra.supabase import get_client, download_storage_file
 from repositories import node_repository
@@ -48,11 +48,11 @@ class NodeService:
         )
         return f"{STORAGE_BUCKET}/{path}"
     
-    def _collect_css_snapshot(self, page: Page) -> str:
+    async def _collect_css_snapshot(self, page: Page) -> str:
         """
         페이지에서 접근 가능한 CSS 텍스트를 수집합니다.
         """
-        return page.evaluate(
+        return await page.evaluate(
             """
             () => {
                 const cssTexts = [];
@@ -73,7 +73,7 @@ class NodeService:
             """
         )
     
-    def create_or_get_node(
+    async def create_or_get_node(
         self,
         run_id: UUID,
         page: Page,
@@ -99,7 +99,7 @@ class NodeService:
             Exception: Supabase 작업 실패 시
         """
         # 1. 페이지 상태 수집
-        page_state = collect_page_state(page)
+        page_state = await collect_page_state(page)
         
         # 2. URL 정규화
         url = page_state["url"]
@@ -164,7 +164,7 @@ class NodeService:
             
             # 10. 아티팩트 업로드 및 ref 업데이트
             # DOM 스냅샷 (HTML)
-            dom_snapshot = page.content()
+            dom_snapshot = await page.content()
             dom_ref = self._upload_artifact(
                 f"{base_path}/dom_snapshot.html",
                 dom_snapshot.encode("utf-8"),
@@ -172,7 +172,7 @@ class NodeService:
             )
             
             # CSS 스냅샷 (CSS)
-            css_snapshot = self._collect_css_snapshot(page)
+            css_snapshot = await self._collect_css_snapshot(page)
             css_ref = self._upload_artifact(
                 f"{base_path}/styles.css",
                 css_snapshot.encode("utf-8"),
@@ -188,7 +188,7 @@ class NodeService:
             )
             
             # 스크린샷 (PNG)
-            screenshot_bytes = page.screenshot(type="png")
+            screenshot_bytes = await page.screenshot(type="png")
             screenshot_ref = self._upload_artifact(
                 f"{base_path}/screenshot.png",
                 screenshot_bytes,
@@ -196,7 +196,7 @@ class NodeService:
             )
             
             # storageState 원본 (JSON)
-            storage_state_raw = page.context.storage_state()
+            storage_state_raw = await page.context.storage_state()
             storage_ref = self._upload_artifact(
                 f"{base_path}/storage_state.json",
                 json.dumps(storage_state_raw, ensure_ascii=False).encode("utf-8"),
@@ -313,14 +313,14 @@ def _get_node_service() -> NodeService:
     return _node_service_instance
 
 
-def create_or_get_node(
+async def create_or_get_node(
     run_id: UUID,
     page: Page,
     depths: Optional[Dict[str, int]] = None,
     return_created: bool = False
 ) -> Union[Dict, Tuple[Dict, bool]]:
     """하위 호환성을 위한 함수 래퍼"""
-    return _get_node_service().create_or_get_node(run_id, page, depths, return_created)
+    return await _get_node_service().create_or_get_node(run_id, page, depths, return_created)
 
 
 def update_node_depths(node_id: UUID, depths: Dict[str, int]) -> Dict:

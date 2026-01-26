@@ -1,7 +1,8 @@
 """a11y_info 추출 테스트 스크립트"""
 import sys
+import asyncio
 from pathlib import Path
-from playwright.sync_api import sync_playwright
+from playwright.async_api import async_playwright
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
 if str(ROOT_DIR) not in sys.path:
@@ -10,7 +11,7 @@ if str(ROOT_DIR) not in sys.path:
 from utils.state_collector import collect_a11y_info
 
 
-def test_collect_a11y_info() -> None:
+async def test_collect_a11y_info() -> None:
     """
     접근성 정보가 정상적으로 추출되는지 확인합니다.
     - role
@@ -30,12 +31,12 @@ def test_collect_a11y_info() -> None:
     </html>
     """
 
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        page = browser.new_page()
-        page.set_content(html)
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=True)
+        page = await browser.new_page()
+        await page.set_content(html)
 
-        a11y_info = collect_a11y_info(page)
+        a11y_info = await collect_a11y_info(page)
         print("a11y_info:", a11y_info)
 
         expected = {
@@ -49,12 +50,12 @@ def test_collect_a11y_info() -> None:
             missing = expected.difference(set(a11y_info))
             raise AssertionError(f"누락된 항목: {sorted(missing)}")
 
-        browser.close()
+        await browser.close()
 
 
 if __name__ == "__main__":
     try:
-        test_collect_a11y_info()
+        asyncio.run(test_collect_a11y_info())
         print("✓ a11y_info 추출 테스트 통과")
     except Exception as e:
         print(f"✗ a11y_info 추출 테스트 실패: {e}")

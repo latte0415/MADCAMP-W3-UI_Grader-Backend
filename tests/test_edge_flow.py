@@ -1,9 +1,10 @@
 """엣지 액션 추출/기록 테스트 스크립트"""
 import os
 import sys
+import asyncio
 from pathlib import Path
 from uuid import UUID
-from playwright.sync_api import sync_playwright
+from playwright.async_api import async_playwright
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
 if str(ROOT_DIR) not in sys.path:
@@ -29,7 +30,7 @@ def create_test_run(target_url: str, start_url: str) -> str:
     raise Exception("Run 생성 실패")
 
 
-def test_edge_flow():
+async def test_edge_flow():
     target_url = os.getenv("TEST_TARGET_URL", "https://madcamp-w2-decision-maker-web.vercel.app")
     start_url = os.getenv("TEST_START_URL", "https://madcamp-w2-decision-maker-web.vercel.app/login")
 
@@ -41,19 +42,19 @@ def test_edge_flow():
         run_id = create_test_run(target_url, start_url)
         print(f"\n✓ Run 생성: {run_id}")
 
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(
+        async with async_playwright() as p:
+            browser = await p.chromium.launch(headless=True)
+            context = await browser.new_context(
                 user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
                 viewport={'width': 1280, 'height': 720}
             )
-            page = context.new_page()
-            page.goto(start_url, wait_until="networkidle")
+            page = await context.new_page()
+            await page.goto(start_url, wait_until="networkidle")
 
             # from_node 생성
-            from_node = create_or_get_node(run_id, page)
+            from_node = await create_or_get_node(UUID(run_id), page)
             print(f"✓ from_node: {from_node['id']}")
-            from_node_with_artifacts = get_node_with_artifacts(from_node["id"])
+            from_node_with_artifacts = get_node_with_artifacts(UUID(from_node["id"]))
             css_snapshot = None
             if from_node_with_artifacts and from_node_with_artifacts.get("artifacts"):
                 css_snapshot = from_node_with_artifacts["artifacts"].get("css_snapshot")
@@ -63,7 +64,7 @@ def test_edge_flow():
                 print("✗ CSS 스냅샷 로드 실패 또는 비어있음")
 
             # 액션 추출
-            actions = extract_actions_from_page(page)
+            actions = await extract_actions_from_page(page)
             if not actions:
                 raise Exception("추출된 액션이 없습니다.")
 
@@ -71,7 +72,7 @@ def test_edge_flow():
             print(f"✓ 액션 선택: {action['action_type']} / {action['action_target']}")
 
             # 액션 수행 + 엣지 기록 (to_node 생성 포함)
-            edge = perform_and_record_edge(
+            edge = await perform_and_record_edge(
                 UUID(run_id),
                 UUID(from_node["id"]),
                 page,
@@ -86,13 +87,13 @@ def test_edge_flow():
                 print("✗ to_node 생성 실패 (액션 실패 또는 상태 변화 없음)")
 
             # 중복 테스트
-            edge2 = perform_and_record_edge(UUID(run_id), UUID(from_node["id"]), page, action)
+            edge2 = await perform_and_record_edge(UUID(run_id), UUID(from_node["id"]), page, action)
             if edge["id"] == edge2["id"]:
                 print("✓ 중복 엣지 처리 OK")
             else:
                 print("✗ 중복 엣지 처리 실패 (다른 ID)")
 
-            browser.close()
+            await browser.close()
 
         print("\n✓ 테스트 완료")
         print("=" * 50)
@@ -103,7 +104,7 @@ def test_edge_flow():
         traceback.print_exc()
         sys.exit(1)
 
-def test_three_actions_from_baseline():
+async def test_three_actions_from_baseline():
     """기준점에서 액션 3개 실행 테스트"""
     target_url = os.getenv("TEST_TARGET_URL", "https://madcamp-w2-decision-maker-web.vercel.app")
     start_url = os.getenv("TEST_START_URL", "https://madcamp-w2-decision-maker-web.vercel.app/login")
@@ -116,17 +117,17 @@ def test_three_actions_from_baseline():
         run_id = create_test_run(target_url, start_url)
         print(f"\n✓ Run 생성: {run_id}")
 
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(
+        async with async_playwright() as p:
+            browser = await p.chromium.launch(headless=True)
+            context = await browser.new_context(
                 user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
                 viewport={'width': 1280, 'height': 720}
             )
-            page = context.new_page()
-            page.goto(start_url, wait_until="networkidle")
+            page = await context.new_page()
+            await page.goto(start_url, wait_until="networkidle")
 
-            from_node = create_or_get_node(run_id, page)
-            from_node_with_artifacts = get_node_with_artifacts(from_node["id"])
+            from_node = await create_or_get_node(UUID(run_id), page)
+            from_node_with_artifacts = get_node_with_artifacts(UUID(from_node["id"]))
             css_snapshot = None
             if from_node_with_artifacts and from_node_with_artifacts.get("artifacts"):
                 css_snapshot = from_node_with_artifacts["artifacts"].get("css_snapshot")
@@ -134,12 +135,12 @@ def test_three_actions_from_baseline():
                 print(f"✓ CSS 스냅샷 로드됨 (length={len(css_snapshot)})")
             else:
                 print("✗ CSS 스냅샷 로드 실패 또는 비어있음")
-            actions = extract_actions_from_page(page)
+            actions = await extract_actions_from_page(page)
             if len(actions) < 3:
                 raise Exception("액션이 3개 미만입니다.")
 
             for idx, action in enumerate(actions[:3], start=1):
-                edge = perform_and_record_edge(
+                edge = await perform_and_record_edge(
                     UUID(run_id),
                     UUID(from_node["id"]),
                     page,
@@ -147,7 +148,7 @@ def test_three_actions_from_baseline():
                 )
                 print(f"✓ 액션 {idx} 기록: {edge['id']}")
 
-            browser.close()
+            await browser.close()
 
         print("\n✓ 테스트 완료")
         print("=" * 50)
@@ -158,7 +159,7 @@ def test_three_actions_from_baseline():
         sys.exit(1)
 
 
-def test_two_step_sequence():
+async def test_two_step_sequence():
     """액션 2번 연속 수행 테스트"""
     target_url = os.getenv("TEST_TARGET_URL", "https://madcamp-w2-decision-maker-web.vercel.app")
     start_url = os.getenv("TEST_START_URL", "https://madcamp-w2-decision-maker-web.vercel.app/login")
@@ -171,17 +172,17 @@ def test_two_step_sequence():
         run_id = create_test_run(target_url, start_url)
         print(f"\n✓ Run 생성: {run_id}")
 
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(
+        async with async_playwright() as p:
+            browser = await p.chromium.launch(headless=True)
+            context = await browser.new_context(
                 user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
                 viewport={'width': 1280, 'height': 720}
             )
-            page = context.new_page()
-            page.goto(start_url, wait_until="networkidle")
+            page = await context.new_page()
+            await page.goto(start_url, wait_until="networkidle")
 
-            from_node = create_or_get_node(run_id, page)
-            from_node_with_artifacts = get_node_with_artifacts(from_node["id"])
+            from_node = await create_or_get_node(UUID(run_id), page)
+            from_node_with_artifacts = get_node_with_artifacts(UUID(from_node["id"]))
             css_snapshot = None
             if from_node_with_artifacts and from_node_with_artifacts.get("artifacts"):
                 css_snapshot = from_node_with_artifacts["artifacts"].get("css_snapshot")
@@ -189,12 +190,12 @@ def test_two_step_sequence():
                 print(f"✓ CSS 스냅샷 로드됨 (length={len(css_snapshot)})")
             else:
                 print("✗ CSS 스냅샷 로드 실패 또는 비어있음")
-            actions = extract_actions_from_page(page)
+            actions = await extract_actions_from_page(page)
             if len(actions) < 2:
                 raise Exception("액션이 2개 미만입니다.")
 
             # 1st action
-            edge1 = perform_and_record_edge(
+            edge1 = await perform_and_record_edge(
                 UUID(run_id),
                 UUID(from_node["id"]),
                 page,
@@ -203,7 +204,7 @@ def test_two_step_sequence():
             print(f"✓ 1차 액션 기록: {edge1['id']}")
 
             # 2nd action (현재 페이지 상태에서 계속)
-            edge2 = perform_and_record_edge(
+            edge2 = await perform_and_record_edge(
                 UUID(run_id),
                 UUID(from_node["id"]),
                 page,
@@ -211,7 +212,7 @@ def test_two_step_sequence():
             )
             print(f"✓ 2차 액션 기록: {edge2['id']}")
 
-            browser.close()
+            await browser.close()
 
         print("\n✓ 테스트 완료")
         print("=" * 50)
@@ -223,6 +224,6 @@ def test_two_step_sequence():
 
 
 if __name__ == "__main__":
-    test_edge_flow()
-    test_three_actions_from_baseline()
-    test_two_step_sequence()
+    asyncio.run(test_edge_flow())
+    asyncio.run(test_three_actions_from_baseline())
+    asyncio.run(test_two_step_sequence())
