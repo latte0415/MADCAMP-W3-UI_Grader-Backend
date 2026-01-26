@@ -116,16 +116,18 @@ class ElementExtractor:
                         return false;
                     };
 
-                    // Selectors for Semantic Elements
+                    // Selectors for Semantic Elements & Structural Headings
                     const selectors = [
                         'button', 
                         'a', 
                         'input', 
                         'textarea', 
-                        'select'
+                        'select',
+                        'h1',
+                        'h2'
                     ];
 
-                    // 1. Interactive Elements Extraction
+                    // 1. Interactive Elements & Headings Extraction
                     selectors.forEach(sel => {
                         document.querySelectorAll(sel).forEach(el => {
                             if (!processedElements.has(el)) {
@@ -133,6 +135,7 @@ class ElementExtractor:
                                 
                                 let type = el.tagName.toLowerCase();
                                 if (type === 'a') type = 'link';
+                                if (type === 'h1' || type === 'h2') type = 'heading';
 
                                 const rect = el.getBoundingClientRect();
                                 const styles = getStyles(el);
@@ -148,7 +151,11 @@ class ElementExtractor:
                                     placeholder: el.getAttribute('placeholder'),
                                     title: el.getAttribute('title'),
                                     aria_label: el.getAttribute('aria-label'),
-                                    aria_current: el.getAttribute('aria-current'), // Added aria-current capture
+                                    aria_current: el.getAttribute('aria-current'),
+                                    aria_selected: el.getAttribute('aria-selected'),
+                                    aria_pressed: el.getAttribute('aria-pressed'),
+                                    checked: el.checked,
+                                    selected: el.selected,
                                     tabindex: el.getAttribute('tabindex'),
                                     disabled: el.disabled || el.getAttribute('aria-disabled') === 'true',
                                     rect: {
@@ -157,6 +164,7 @@ class ElementExtractor:
                                         width: rect.width,
                                         height: rect.height
                                     },
+                                    href: el.getAttribute('href'),
                                     styles: styles,
                                     parent_backgroundColor: parentBg
                                 });
@@ -184,6 +192,10 @@ class ElementExtractor:
                                 title: el.getAttribute('title'),
                                 aria_label: el.getAttribute('aria-label'),
                                 aria_current: el.getAttribute('aria-current'),
+                                aria_selected: el.getAttribute('aria-selected'),
+                                aria_pressed: el.getAttribute('aria-pressed'),
+                                checked: el.getAttribute('aria-checked') === 'true', // role=button usually uses aria-checked if toggle
+                                selected: false,
                                 tabindex: el.getAttribute('tabindex'),
                                 disabled: el.getAttribute('aria-disabled') === 'true',
                                 rect: {
