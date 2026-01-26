@@ -1,29 +1,35 @@
-from infra.langchain.runnables.agent import run_agent
+# 레거시: agent 관련 import (다른 메서드에서 사용)
+from infra.langchain.runnables.legacy.agent import run_agent
 from infra.langchain.config.context import set_run_id, set_from_node_id
 from typing import Dict, Optional, Any, List
 from uuid import UUID
 import json
 
-from infra.langchain.runnables.agent import get_agent
-from infra.langchain.config.executor import ainvoke_runnable
+from infra.langchain.runnables.chain import run_chain
 from infra.langchain.config.context import set_run_id as set_run_id_context
-from infra.langchain.prompts import get_human_input, create_human_message_with_image
-from utils.llm_result_extractor import format_auxiliary_data_for_input, extract_final_response_result
+from infra.langchain.prompts import create_human_message_with_image
         
+from repositories.ai_memory_repository import view_run_memory
+from services.pending_action_service import PendingActionService
+from schemas.filter_action import FilterActionOutput
 
 class AiService:
-    """AI·에이전트 관련 서비스 (chat, tool-test, photo, run_memory, filter-action)."""
+    """AI·체인 관련 서비스 (chat, tool-test, photo, run_memory는 레거시 agent 사용, filter-action은 chain 사용)."""
 
     def __init__(self):
         pass
 
+    # ============================================
+    # 레거시: Agent 기반 메서드들 (향후 chain으로 마이그레이션 예정)
+    # ============================================
+    
     async def get_ai_response(self) -> str:
-        """chat-test 에이전트 실행. Returns: AI 응답 문자열."""
+        """[레거시] chat-test 에이전트 실행. Returns: AI 응답 문자열."""
         result = await run_agent(label="chat-test")
         return str(result)
 
     async def get_ai_response_with_calculator_tools(self) -> str:
-        """tool-test 에이전트 실행 (calculator 도구). Returns: AI 응답 문자열."""
+        """[레거시] tool-test 에이전트 실행 (calculator 도구). Returns: AI 응답 문자열."""
         result = await run_agent(label="tool-test")
         return str(result)
 
@@ -33,7 +39,7 @@ class AiService:
         auxiliary_data: Optional[Dict[str, Any]] = None
     ) -> str:
         """
-        이미지와 보조 자료를 포함하여 AI 응답을 받습니다.
+        [레거시] 이미지와 보조 자료를 포함하여 AI 응답을 받습니다.
         
         Args:
             image_base64: base64로 인코딩된 이미지
@@ -56,7 +62,7 @@ class AiService:
         auxiliary_data: Optional[Dict[str, Any]] = None
     ) -> str:
         """
-        이미지와 run_id를 포함하여 run_memory를 업데이트합니다.
+        [레거시] 이미지와 run_id를 포함하여 run_memory를 업데이트합니다.
         
         Args:
             image_base64: base64로 인코딩된 이미지
@@ -95,26 +101,100 @@ class AiService:
         set_run_id(run_id)
         set_from_node_id(from_node_id)
         
-        # auxiliary_data로 input_actions 전달
-        auxiliary_data = {
-            "input_actions": json.dumps(input_actions, ensure_ascii=False)
-        }
+        # 1. pending action 조회
+        # pending_action_service = PendingActionService()
+        # pending_actions = pending_action_service.list_pending_actions(
+        #     run_id=run_id,
+        #     from_node_id=from_node_id,
+        #     status="pending"
+        # )
         
-        # run_agent를 직접 호출하여 intermediate_steps 확인
-        # context 설정 (run_agent 내부에서도 설정하지만 명시적으로 설정)
-        set_run_id_context(run_id)
+        # 2. run_memory 조회
+        run_memory_data = view_run_memory(run_id)
+        run_memory_content = run_memory_data.get("content", {}) if run_memory_data else {}
         
-        agent_executor = get_agent(label="filter-action", use_vision=False)
-        human_input = get_human_input("filter-action")
-        
-        # auxiliary_data를 human_input에 포함
-        human_input += format_auxiliary_data_for_input(auxiliary_data)
-        
-        result = await ainvoke_runnable(
-            runnable=agent_executor,
-            variables={"input": human_input},
-            step_label="agent",
+        # 3. chain에 input_actions와 run_memory 전달
+        result = await run_chain(
+            label="filter-action",
+            input_actions=input_actions,
+            run_memory=run_memory_content,
+            use_vision=False
         )
         
-        # LLM 결과에서 final_response 툴의 반환값 추출
-        return extract_final_response_result(result)
+        # 4. chain 결과에서 처리 가능한 액션 추출
+        if isinstance(result, FilterActionOutput):
+            # Pydantic 모델을 dict로 변환
+            processable_actions = [action.model_dump(exclude_none=False) for action in result.actions]
+        elif isinstance(result, dict) and "actions" in result:
+            processable_actions = result["actions"]
+        else:
+            processable_actions = []
+        
+        # 5. 처리 불가한 액션 식별 및 pending action에 삽입
+        processable_action_keys = set()
+        for action in processable_actions:
+            # 액션을 고유하게 식별하기 위한 키 생성
+            key = (
+                action.get("action_type", ""),
+                action.get("action_target", ""),
+                action.get("selector", ""),
+                action.get("role", ""),
+                action.get("name", "")
+            )
+            processable_action_keys.add(key)
+        
+        # input_actions 중 처리 불가한 액션 찾기
+        for action in input_actions:
+            # is_filled가 true인 액션은 무시
+            if action.get("is_filled", False):
+                continue
+            
+            # 액션을 고유하게 식별하기 위한 키 생성
+            action_key = (
+                action.get("action_type", ""),
+                action.get("action_target", ""),
+                action.get("selector", ""),
+                action.get("role", ""),
+                action.get("name", "")
+            )
+            
+            # 처리 가능한 액션에 포함되지 않은 경우 pending action에 삽입
+            if action_key not in processable_action_keys:
+                try:
+                    pending_action_service = PendingActionService()
+                    pending_action_service.create_pending_action(
+                        run_id=run_id,
+                        from_node_id=from_node_id,
+                        action=action,
+                        status="pending"
+                    )
+                except Exception as e:
+                    # pending action 생성 실패는 로그만 남기고 계속 진행
+                    print(f"[filter_input_actions_with_run_memory] pending action 생성 실패: {e}")
+        
+        # 6. 적절한 입력값이 있는 액션만 반환
+        return processable_actions
+    
+    async def filter_input_action(
+        self,
+        input_action: Dict[str, Any],
+        run_id: UUID,
+        from_node_id: UUID
+    ) -> Dict[str, Any]:
+        """
+        단일 입력 액션을 필터링합니다 (filter_input_actions_with_run_memory의 래퍼).
+        
+        Args:
+            input_action: 입력값이 필요한 단일 액션 (딕셔너리 형태)
+            run_id: 탐색 세션 ID
+            from_node_id: 시작 노드 ID
+        
+        Returns:
+            처리 가능한 액션 (action_value가 채워진 딕셔너리 형태) 또는 빈 딕셔너리
+        """
+        results = await self.filter_input_actions_with_run_memory(
+            input_actions=[input_action],
+            run_id=run_id,
+            from_node_id=from_node_id
+        )
+        return results[0] if results else {}

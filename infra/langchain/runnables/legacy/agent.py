@@ -1,8 +1,10 @@
 """
-Agent 실행 모듈
+[레거시] Agent 실행 모듈
 
 Infrastructure 레이어: LangChain Agent 실행
 Function Calling 방식 사용 (OpenAI Tools Agent)
+
+참고: 이 모듈은 레거시입니다. 새로운 기능은 chain을 사용하세요.
 """
 
 from typing import Optional, Dict, Any
