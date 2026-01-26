@@ -1,113 +1,173 @@
 {
-  "url": "https://madcamp-w2-decision-maker-web.vercel.app/login",
+  "url": "http://localhost:5173/#lost_page",
   "summary": {
-    "total_elements": 6,
-    "passed_count": 4,
-    "failed_count": 2
-  },
-  "details": {
-    "semantic_and_attribute": {
-      "pass": [
-        {
-          "tag": "button",
-          "text": "시작하기",
-          "id": "",
-          "class": "login-primary-btn",
-          "type": "button"
-        },
-        {
-          "tag": "button",
-          "text": "Google 계정으로 계속하기",
-          "id": "",
-          "class": "google-login-btn",
-          "type": "button"
-        },
-        {
-          "tag": "a",
-          "text": "회원가입",
-          "id": "",
-          "class": "login-link",
-          "type": "link"
-        },
-        {
-          "tag": "a",
-          "text": "비밀번호 찾기",
-          "id": "",
-          "class": "login-link",
-          "type": "link"
-        },
-        {
-          "tag": "input",
-          "text": "E-mail",
-          "id": "",
-          "class": "login-input",
-          "type": "input"
-        },
-        {
-          "tag": "input",
-          "text": "PW",
-          "id": "",
-          "class": "login-input",
-          "type": "input"
-        }
-      ],
-      "fail": []
+    "total_elements": 3,
+    "learnability": {
+      "passed": 2,
+      "failed": 1
     },
-    "visual_rules": {
-      "pass": [
-        {
-          "tag": "button",
-          "text": "시작하기",
-          "id": "",
-          "class": "login-primary-btn",
-          "type": "button"
-        },
-        {
-          "tag": "button",
-          "text": "Google 계정으로 계속하기",
-          "id": "",
-          "class": "google-login-btn",
-          "type": "button"
-        },
-        {
-          "tag": "input",
-          "text": "E-mail",
-          "id": "",
-          "class": "login-input",
-          "type": "input"
-        },
-        {
-          "tag": "input",
-          "text": "PW",
-          "id": "",
-          "class": "login-input",
-          "type": "input"
-        }
-      ],
-      "fail": [
-        {
-          "tag": "a",
-          "text": "회원가입",
-          "id": "",
-          "class": "login-link",
-          "type": "link",
-          "issues": [
-            "Interactive area too small: 52x22px (Min 24x24px)",
-            "Low text contrast: 2.77:1 (Min 4.5:1 recommended)"
-          ]
-        },
-        {
-          "tag": "a",
-          "text": "비밀번호 찾기",
-          "id": "",
-          "class": "login-link",
-          "type": "link",
-          "issues": [
-            "Interactive area too small: 82x22px (Min 24x24px)",
-            "Low text contrast: 2.77:1 (Min 4.5:1 recommended)"
-          ]
-        }
-      ]
+    "control": {
+      "passed": 0,
+      "failed": 1
     }
-  }
+  },
+  "results": [
+    {
+      "element": {
+        "tag": "Page",
+        "text": "Global Check",
+        "id": null,
+        "class": null,
+        "type": "page"
+      },
+      "learnability": {
+        "status": "PASS",
+        "checks": []
+      },
+      "control": {
+        "status": "FAIL",
+        "checks": [
+          {
+            "name": "이동 경로(Breadcrumb)",
+            "status": "FAIL",
+            "message": "Breadcrumb(이동 경로)가 제공되지 않음"
+          }
+        ]
+      }
+    },
+    {
+      "element": {
+        "tag": "button",
+        "text": "Logout",
+        "id": "",
+        "class": "logout-btn",
+        "type": "button"
+      },
+      "learnability": {
+        "status": "PASS",
+        "checks": [
+          {
+            "name": "표준 태그 사용",
+            "status": "PASS",
+            "message": "표준 태그 <button> 사용됨"
+          },
+          {
+            "name": "레이블(텍스트) 제공",
+            "status": "PASS",
+            "message": "레이블 존재함"
+          },
+          {
+            "name": "마우스 커서 스타일",
+            "status": "PASS",
+            "message": "커서 스타일 적절함"
+          },
+          {
+            "name": "터치 타겟 크기",
+            "status": "PASS",
+            "message": "크기 적절함 (68x27px)"
+          },
+          {
+            "name": "텍스트 명암비(가독성)",
+            "status": "PASS",
+            "message": "대비 적절함 (4.53:1)"
+          },
+          {
+            "name": "배경 대비 가시성",
+            "status": "PASS",
+            "message": "배경과 구분 명확함"
+          }
+        ]
+      },
+      "control": {
+        "status": "PASS",
+        "checks": []
+      }
+    },
+    {
+      "element": {
+        "tag": "button",
+        "text": "Back",
+        "id": "",
+        "class": "",
+        "type": "button"
+      },
+      "learnability": {
+        "status": "FAIL",
+        "checks": [
+          {
+            "name": "표준 태그 사용",
+            "status": "PASS",
+            "message": "표준 태그 <button> 사용됨"
+          },
+          {
+            "name": "레이블(텍스트) 제공",
+            "status": "PASS",
+            "message": "레이블 존재함"
+          },
+          {
+            "name": "마우스 커서 스타일",
+            "status": "FAIL",
+            "message": "커서가 'pointer'가 아님 ('default')"
+          },
+          {
+            "name": "터치 타겟 크기",
+            "status": "FAIL",
+            "message": "크기가 너무 작음: 48x21px (최소 24px 권장)"
+          },
+          {
+            "name": "텍스트 명암비(가독성)",
+            "status": "PASS",
+            "message": "대비 적절함 (18.26:1)"
+          },
+          {
+            "name": "배경 대비 가시성",
+            "status": "FAIL",
+            "message": "배경과 구분이 잘 안됨: 1.05:1 (최소 3.0:1 권장)"
+          }
+        ]
+      },
+      "control": {
+        "status": "PASS",
+        "checks": []
+      }
+    },
+    {
+      "element": {
+        "tag": "a",
+        "text": "Dashboard",
+        "id": "",
+        "class": "nav-link",
+        "type": "link"
+      },
+      "learnability": {
+        "status": "PASS",
+        "checks": [
+          {
+            "name": "표준 태그 사용",
+            "status": "PASS",
+            "message": "표준 태그 <a> 사용됨"
+          },
+          {
+            "name": "마우스 커서 스타일",
+            "status": "PASS",
+            "message": "커서 스타일 적절함"
+          },
+          {
+            "name": "터치 타겟 크기",
+            "status": "PASS",
+            "message": "크기 적절함 (199x39px)"
+          },
+          {
+            "name": "텍스트 명암비(가독성)",
+            "status": "PASS",
+            "message": "대비 적절함 (11.99:1) (투명 배경, 부모 배경색 기준)"
+          }
+        ]
+      },
+      "control": {
+        "status": "PASS",
+        "checks": []
+      }
+    }
+  ]
 }

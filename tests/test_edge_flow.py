@@ -1,5 +1,6 @@
 """엣지 액션 추출/기록 테스트 스크립트"""
 import os
+import random
 import sys
 from pathlib import Path
 from uuid import UUID
@@ -30,8 +31,8 @@ def create_test_run(target_url: str, start_url: str) -> str:
 
 
 def test_edge_flow():
-    target_url = os.getenv("TEST_TARGET_URL", "https://madcamp-w2-decision-maker-web.vercel.app")
-    start_url = os.getenv("TEST_START_URL", "https://madcamp-w2-decision-maker-web.vercel.app/login")
+    target_url = os.getenv("TEST_TARGET_URL", "http://localhost:5173/#phase1_analyze")
+    start_url = os.getenv("TEST_START_URL", "http://localhost:5173/#phase1_analyze")
 
     print("=" * 50)
     print("엣지 액션 추출/기록 테스트 시작")
@@ -67,7 +68,7 @@ def test_edge_flow():
             if not actions:
                 raise Exception("추출된 액션이 없습니다.")
 
-            action = actions[0]
+            action = random.choice(actions)
             print(f"✓ 액션 선택: {action['action_type']} / {action['action_target']}")
 
             # 액션 수행 + 엣지 기록 (to_node 생성 포함)
@@ -105,8 +106,8 @@ def test_edge_flow():
 
 def test_three_actions_from_baseline():
     """기준점에서 액션 3개 실행 테스트"""
-    target_url = os.getenv("TEST_TARGET_URL", "https://madcamp-w2-decision-maker-web.vercel.app")
-    start_url = os.getenv("TEST_START_URL", "https://madcamp-w2-decision-maker-web.vercel.app/login")
+    target_url = os.getenv("TEST_TARGET_URL", "http://localhost:5173/#phase1_analyze")
+    start_url = os.getenv("TEST_START_URL", "http://localhost:5173/#phase1_analyze")
 
     print("=" * 50)
     print("기준점에서 액션 3개 테스트 시작")
@@ -138,7 +139,7 @@ def test_three_actions_from_baseline():
             if len(actions) < 3:
                 raise Exception("액션이 3개 미만입니다.")
 
-            for idx, action in enumerate(actions[:3], start=1):
+            for idx, action in enumerate(random.sample(actions, min(len(actions), 3)), start=1):
                 edge = perform_and_record_edge(
                     UUID(run_id),
                     UUID(from_node["id"]),
@@ -160,8 +161,8 @@ def test_three_actions_from_baseline():
 
 def test_two_step_sequence():
     """액션 2번 연속 수행 테스트"""
-    target_url = os.getenv("TEST_TARGET_URL", "https://madcamp-w2-decision-maker-web.vercel.app")
-    start_url = os.getenv("TEST_START_URL", "https://madcamp-w2-decision-maker-web.vercel.app/login")
+    target_url = os.getenv("TEST_TARGET_URL", "http://localhost:5173/#phase1_analyze")
+    start_url = os.getenv("TEST_START_URL", "http://localhost:5173/#phase1_analyze")
 
     print("=" * 50)
     print("액션 2번 연속 테스트 시작")
@@ -193,12 +194,15 @@ def test_two_step_sequence():
             if len(actions) < 2:
                 raise Exception("액션이 2개 미만입니다.")
 
+            # 랜덤하게 2개 선택
+            selected_actions = random.sample(actions, 2)
+
             # 1st action
             edge1 = perform_and_record_edge(
                 UUID(run_id),
                 UUID(from_node["id"]),
                 page,
-                actions[0]
+                selected_actions[0]
             )
             print(f"✓ 1차 액션 기록: {edge1['id']}")
 
@@ -207,7 +211,7 @@ def test_two_step_sequence():
                 UUID(run_id),
                 UUID(from_node["id"]),
                 page,
-                actions[1]
+                selected_actions[1]
             )
             print(f"✓ 2차 액션 기록: {edge2['id']}")
 

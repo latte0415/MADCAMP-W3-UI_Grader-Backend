@@ -44,8 +44,8 @@ def create_test_run(target_url: str, start_url: str) -> str:
 def test_node_insert():
     """노드 삽입 테스트"""
     # 테스트 URL
-    target_url = os.getenv("TEST_TARGET_URL", "https://madcamp-w2-decision-maker-web.vercel.app")
-    start_url = os.getenv("TEST_START_URL", "https://madcamp-w2-decision-maker-web.vercel.app/login")
+    target_url = os.getenv("TEST_TARGET_URL", "http://localhost:5173/#lost_page")
+    start_url = os.getenv("TEST_START_URL", "http://localhost:5173/#lost_page")
     
     print("=" * 50)
     print("노드 삽입 테스트 시작")

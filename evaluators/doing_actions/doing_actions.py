@@ -37,7 +37,7 @@ def evaluate_doing_actions(chain_data: List[Dict[str, Any]]) -> Dict[str, Any]:
         "B": 0.1
     }
 
-    # 더 나은 휴리스틱: 0단계의 경우 거리를 무시하거나 화면 중앙(1920/2, 1080/2)을 가정할 수 있습니다.
+    # 더 나은 휴리스틱: 0단계의 경우 거리를 무시하거나 화면 중앙(1920/2, 1080/2)을 가정.
     last_pos = {"x": 960, "y": 540} 
 
     total_klm_time = 0.0
@@ -140,9 +140,71 @@ def evaluate_doing_actions(chain_data: List[Dict[str, Any]]) -> Dict[str, Any]:
             pass
 
     results["efficiency"]["interaction_efficiency"]["total_estimated_time_s"] = round(total_klm_time, 2)
+
     
+    # --- 3. 사용자 통제 및 자유 (User Control & Freedom) ---
+    control_results = evaluate_user_control(chain_data)
+    results["control"] = control_results
+
     print_efficiency_report(results)
     return results
+
+def evaluate_user_control(chain_data: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """
+    사용자 통제 및 자유 (User Control & Freedom) 평가
+    - 이전 화면으로 돌아갈 수 있는 장치(링크)가 있는지 확인
+    - Destination Check: href가 이전 Node의 URL과 일치하는지 확인 (키워드 검사 제외)
+    """
+    control_issues = []
+    safe_steps = []
+    
+    # URL History for checking 'Back' destination
+    url_history = []
+    
+    for i, step in enumerate(chain_data):
+        from_node = step.get('from_node') or {}
+        current_url = from_node.get('url', '').strip()
+        elements = from_node.get('elements', [])
+        
+        # Record history
+        if current_url:
+            url_history.append(current_url)
+        else:
+            url_history.append(None)
+
+        # Step 0 skipped
+        if i == 0:
+            continue
+
+        # Target URL to go back to
+        prev_url = url_history[i-1]
+        
+        has_control_device = False
+        found_reason = ""
+
+        # Check all elements in the current screen
+        for el in elements:
+            # Destination Check Only
+            href = el.get('href')
+            if href and prev_url and href.strip() == prev_url:
+                has_control_device = True
+                found_reason = f"Link to previous URL found ({href})"
+                break
+        
+        if has_control_device:
+            safe_steps.append({
+                "step": i,
+                "reason": found_reason
+            })
+        else:
+            control_issues.append({
+                "step": i,
+                "url": current_url,
+                "message": "사용자가 이전 화면으로 돌아가거나 작업을 취소할 명확한 장치(이전 URL로 돌아가는 링크)를 찾을 수 없습니다."
+            })
+            
+    return {"issues": control_issues, "safe_steps": safe_steps}
+
 
 def find_element(target: str, elements: List[Dict]) -> Optional[Dict]:
     """after_actions에 있는 것과 유사한 헬퍼 함수입니다."""
@@ -192,4 +254,20 @@ def print_efficiency_report(results: Dict):
         for issue in tss["fitts_issues"]:
             print(f"     * 단계 {issue['step']+1}: '{issue['target']}'(으)로 이동 (거리: {issue['distance']}px, ID: {issue['ID']})")
 
+    if tss["fitts_issues"]:
+        print(f"   - [!] {len(tss['fitts_issues'])}개의 높은 난이도 동작 발견 (ID > 4.5):")
+        for issue in tss["fitts_issues"]:
+            print(f"     * 단계 {issue['step']+1}: '{issue['target']}'(으)로 이동 (거리: {issue['distance']}px, ID: {issue['ID']})")
+
+    print(f"\n3. 사용자 통제 및 자유 (User Control & Freedom)")
+    ctrl = results.get("control", {})
+    issues = ctrl.get("issues", [])
+    
+    if not issues:
+        print("   - 모든 단계에서 사용자가 작업 흐름을 제어할 수 있는 장치(뒤로가기/취소 링크)가 발견되었습니다. (좋음)")
+    else:
+        print(f"   - [!] {len(issues)}개의 단계에서 통제 장치 부재 가능성 발견:")
+        for issue in issues:
+            print(f"     * 단계 {issue['step']+1}: {issue['message']}")
+            
     print("="*40 + "\n")
