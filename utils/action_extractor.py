@@ -145,3 +145,43 @@ def extract_actions_from_page(page: Page) -> List[Dict]:
         deduped[key] = action
 
     return list(deduped.values())
+
+
+def filter_input_required_actions(actions: List[Dict]) -> List[Dict]:
+    """
+    입력 정보가 필요한 액션만 필터링합니다.
+    - 텍스트 입력, 드롭다운, 토글 등 포함
+    """
+    input_roles = {
+        "textbox",
+        "combobox",
+        "listbox",
+        "switch",
+        "checkbox",
+        "radio",
+        "spinbutton",
+        "slider"
+    }
+    input_tags = {"input", "textarea", "select"}
+    filtered: List[Dict] = []
+
+    for action in actions:
+        action_type = action.get("action_type", "")
+        role = (action.get("role") or "").lower()
+        tag = (action.get("tag") or "").lower()
+        selector = (action.get("selector") or "").lower()
+
+        if action_type == "fill":
+            filtered.append(action)
+            continue
+        if role in input_roles:
+            filtered.append(action)
+            continue
+        if tag in input_tags:
+            filtered.append(action)
+            continue
+        if selector.startswith(("input", "textarea", "select")):
+            filtered.append(action)
+            continue
+
+    return filtered
