@@ -1,0 +1,110 @@
+import sys
+import os
+import argparse
+from uuid import UUID
+
+# Import path setup
+current_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.dirname(current_dir)
+if project_root not in sys.path:
+    sys.path.append(project_root)
+
+try:
+    from services.node import NodeAnalyzer
+    from services.edge_service import get_edge_by_id
+    from services.element_extractor import ElementExtractor
+    from evaluators.doing_actions.doing_actions import evaluate_doing_actions
+except ImportError:
+    # Fallback if running directly from services/
+    sys.path.append(project_root)
+    from services.node import NodeAnalyzer
+    from services.edge_service import get_edge_by_id
+    from services.element_extractor import ElementExtractor
+    from evaluators.doing_actions.doing_actions import evaluate_doing_actions
+
+def analyze_action_chain(action_ids):
+    print(f"Analyzing chain of {len(action_ids)} actions...")
+    
+    chain_data = []
+    previous_to_node_id = None
+
+    for i, action_id in enumerate(action_ids):
+        step_data = {}
+        print(f"\n{'='*20} Step {i+1} : Action {action_id} {'='*20}")
+        
+        # 1. Load Action (Edge)
+        edge_data = get_edge_by_id(action_id)
+        if not edge_data:
+            print(f"[ERROR] Failed to load Edge data for ID: {action_id}")
+            previous_to_node_id = None 
+            continue
+        
+        step_data['action'] = edge_data
+
+        from_node_id = edge_data.get('from_node_id')
+        to_node_id = edge_data.get('to_node_id')
+
+        # Check continuity
+        if previous_to_node_id and from_node_id != previous_to_node_id:
+            print(f"[WARNING] Discontinuity detected! Previous To-Node ({previous_to_node_id}) != Current From-Node ({from_node_id})")
+
+        print(f"[Action Info]")
+        print(f"  ID:      {action_id}")
+        
+        # 2. Load Previous Node
+        if from_node_id:
+            print(f"\n[From Node] {from_node_id}")
+            prev_node = NodeAnalyzer(from_node_id)
+            if prev_node.load_data():
+                # Extract Elements
+                prev_data = prev_node.node_data if prev_node.node_data else {}
+                prev_dom = prev_node.get_dom()
+                prev_css = prev_node.get_css()
+                
+                if prev_dom:
+                    print(f"  - Extracting elements from DOM ({len(prev_dom)} chars)...")
+                    extractor = ElementExtractor(prev_dom, prev_css)
+                    extraction_result = extractor.extract()
+                    prev_data["elements"] = extraction_result.get("elements", [])
+                    prev_data["status_components"] = extraction_result.get("status_components", {})
+                    print(f"  - Extracted {len(prev_data['elements'])} elements.")
+                
+                step_data['from_node'] = prev_data
+            else:
+                print("  [ERROR] Failed to load From Node data")
+                step_data['from_node'] = None
+        else:
+            print("\n[From Node] None")
+            step_data['from_node'] = None
+
+        # 3. Load Next Node
+        if to_node_id:
+            print(f"\n[To Node] {to_node_id}")
+            next_node = NodeAnalyzer(to_node_id)
+            if next_node.load_data():
+                next_data = next_node.node_data if next_node.node_data else {}
+                # We could extract elements for next node too if needed, but usually we need it to verify state changes
+                # For now just passing the raw data including artifacts
+                step_data['to_node'] = next_data
+            else:
+                print("  [ERROR] Failed to load To Node data")
+                step_data['to_node'] = None
+        else:
+            print("\n[To Node] None")
+            step_data['to_node'] = None
+        
+        chain_data.append(step_data)
+        previous_to_node_id = to_node_id
+    
+    print(f"\n{'='*20} Analysis Complete. Passing to Doing Actions Evaluator... {'='*20}")
+    evaluate_doing_actions(chain_data)
+
+def main():
+    parser = argparse.ArgumentParser(description="Analyze a chain of actions.")
+    parser.add_argument("action_ids", nargs='+', help="List of Action (Edge) UUIDs in order")
+    
+    args = parser.parse_args()
+    analyze_action_chain(args.action_ids)
+
+if __name__ == "__main__":
+    main()

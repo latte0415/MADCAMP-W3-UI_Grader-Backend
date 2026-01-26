@@ -1,3 +1,7 @@
+## 화면을 보는 순간에 대한 analyze
+## 한 개의 노드가 주어진다고 가정
+
+
 import sys
 import os
 import argparse
@@ -43,7 +47,9 @@ def main():
                 import json
 
                 extractor = ElementExtractor(dom_content, css_content)
-                elements = extractor.extract()
+                extraction_result = extractor.extract()
+                elements = extraction_result.get("elements", [])
+                status_components = extraction_result.get("status_components", {})
                 
                 print(f"분석 완료: 총 {len(elements)}개의 인터랙티브 요소를 찾았습니다.")
                 
@@ -51,7 +57,8 @@ def main():
                 result_data = {
                     "node_id": str(analyzer.node_id),
                     "url": analyzer.node_data.get("url", "Unknown"), # node_data에서 URL 가져오기 시도
-                    "elements": elements
+                    "elements": elements,
+                    "status_components": status_components
                 }
 
                 # elements.json으로 저장 (프로젝트 루트에 저장)
@@ -73,19 +80,6 @@ def main():
                     print(f"평가 완료. 요약 - 통과: {evaluation_result['summary']['passed_count']}, 실패: {evaluation_result['summary']['failed_count']}")
                 else:
                     print("평가 실행 실패")
-
-                print("\n[Evaluator] Visibility of System Status Checklist 실행 중...")
-                from evaluators.Visibility_of_system_status.visibility_of_system_status import check_visibility_of_system_status
-                
-                # 데이터와 함께 평가 실행
-                # 경로는 elements.json과 동일한 위치에 저장되도록 설정
-                visibility_result = check_visibility_of_system_status(data=result_data, json_path=output_path)
-
-                if visibility_result:
-                    summary = visibility_result['summary']
-                    print(f"평가 완료. 요약 - Title Found: {summary['title_found']}, Progress Found: {summary['progress_indicators_found']}, Breadcrumbs: {summary['breadcrumbs_found']}")
-                else:
-                    print("Visibility 평가 실행 실패")
 
 
     except Exception as e:

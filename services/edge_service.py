@@ -9,6 +9,20 @@ from services.node_service import create_or_get_node, get_node_by_id
 from utils.graph_classifier import classify_change
 
 
+def get_edge_by_id(edge_id: str) -> Optional[Dict]:
+    """
+    ID로 엣지(액션) 조회
+    """
+    supabase = get_client()
+    try:
+        result = supabase.table("edges").select("*").eq("id", edge_id).execute()
+        if result.data and len(result.data) > 0:
+            return result.data[0]
+        return None
+    except Exception as e:
+        print(f"Error fetching edge {edge_id}: {e}")
+        return None
+
 def is_duplicate_action(run_id: UUID, from_node_id: UUID, action: Dict) -> Optional[Dict]:
     """
     중복 액션 여부 확인

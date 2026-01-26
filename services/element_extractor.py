@@ -10,11 +10,14 @@ class ElementExtractor:
         logging.basicConfig(level=logging.INFO)
         self.logger = logging.getLogger(__name__)
 
-    def extract(self) -> list:
+    def extract(self) -> dict:
         """
-        Parses DOM and CSS to find interactive elements and return them as a list of dictionaries.
+        Parses DOM and CSS to find interactive elements.
+        Returns a dictionary containing:
+        - elements: List of interactive elements with styles
+        - status_components: Dictionary of specific components (nav_items, etc.)
         """
-        results = []
+        results = {"elements": [], "status_components": {}}
         try:
             with sync_playwright() as p:
                 # Launch browser
@@ -47,7 +50,7 @@ class ElementExtractor:
                 page.set_content(full_html)
 
                 self.logger.info("Evaluating page to find elements...")
-                results = page.evaluate("""() => {
+                result_data = page.evaluate("""() => {
                     const foundElements = [];
                     const processedElements = new Set();
 
@@ -87,7 +90,30 @@ class ElementExtractor:
                             }
                             parent = parent.parentElement;
                         }
-                        return 'rgba(0, 0, 0, 0)'; // Fallback
+                        return 'rgb(255, 255, 255)'; // Fallback to white (standard browser default)
+                    };
+
+                    // Helper to check if element is active (robust check)
+                    const checkIsActive = (el) => {
+                        // 1. Aria Check
+                        const ariaCurrent = el.getAttribute('aria-current');
+                        if (ariaCurrent && ariaCurrent !== 'false') return true;
+
+                        // 2. Class Check
+                        const className = (el.className || '').toLowerCase();
+                        if (className.includes('active') || 
+                            className.includes('selected') || 
+                            className.includes('current')) return true;
+
+                        // 3. Style Check (Simple Heuristics)
+                        const styles = getStyles(el);
+                        // Font weight bold (700+) or explicit 'bold'
+                        if (parseInt(styles.fontWeight) >= 700 || styles.fontWeight === 'bold') {
+                            return true; 
+                        }
+                        if (styles.textDecoration && styles.textDecoration.includes('underline')) return true;
+                        
+                        return false;
                     };
 
                     // Selectors for Semantic Elements
@@ -99,7 +125,7 @@ class ElementExtractor:
                         'select'
                     ];
 
-                    // 1. Semantic Elements
+                    // 1. Interactive Elements Extraction
                     selectors.forEach(sel => {
                         document.querySelectorAll(sel).forEach(el => {
                             if (!processedElements.has(el)) {
@@ -122,6 +148,7 @@ class ElementExtractor:
                                     placeholder: el.getAttribute('placeholder'),
                                     title: el.getAttribute('title'),
                                     aria_label: el.getAttribute('aria-label'),
+                                    aria_current: el.getAttribute('aria-current'), // Added aria-current capture
                                     tabindex: el.getAttribute('tabindex'),
                                     disabled: el.disabled || el.getAttribute('aria-disabled') === 'true',
                                     rect: {
@@ -156,6 +183,7 @@ class ElementExtractor:
                                 placeholder: null,
                                 title: el.getAttribute('title'),
                                 aria_label: el.getAttribute('aria-label'),
+                                aria_current: el.getAttribute('aria-current'),
                                 tabindex: el.getAttribute('tabindex'),
                                 disabled: el.getAttribute('aria-disabled') === 'true',
                                 rect: {
@@ -170,10 +198,99 @@ class ElementExtractor:
                         }
                     });
 
-                    return foundElements;
+
+                    // 3. Extract Navigation Items (Status Component)
+                    const navItems = [];
+                    const navContainers = document.querySelectorAll('nav, [role="navigation"], .nav, .menu, .gnb, .lnb, header');
+                    navContainers.forEach(container => {
+                        const links = container.querySelectorAll('a, [role="link"]');
+                        links.forEach(link => {
+                           navItems.push({
+                               text: link.innerText || link.getAttribute('aria-label') || '',
+                               href: link.getAttribute('href'),
+                               is_active: checkIsActive(link)
+                           });
+                        });
+                    });
+
+                    // 4. Extract Breadcrumbs
+                    const breadcrumbs = [];
+                    const bcContainers = document.querySelectorAll('nav[aria-label*="Breadcrumb"], .breadcrumb, [itemtype*="BreadcrumbList"]');
+                    bcContainers.forEach(container => {
+                        const items = container.querySelectorAll('li, a, span');
+                         items.forEach(item => {
+                            if (item.innerText.trim()) {
+                                breadcrumbs.push({
+                                    text: item.innerText.trim(),
+                                    is_active: checkIsActive(item) || item.getAttribute('aria-current') === 'page'
+                                });
+                            }
+                        });
+                    });
+
+                    // 5. Extract Progress Indicators
+                    const progressIndicators = [];
+                    const progSelectors = [
+                        '[role="progressbar"]', 
+                        '[role="status"]', 
+                        '.spinner', '.loader', '.loading', '.progress', 
+                        'svg[class*="spinner"]', 'svg[class*="loader"]',
+                        '[aria-busy="true"]'
+                    ];
+                    
+                    document.querySelectorAll(progSelectors.join(',')).forEach(el => {
+                        // Filter out invisible ones
+                        const style = window.getComputedStyle(el);
+                        if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return;
+
+                        const rect = el.getBoundingClientRect();
+                        if (rect.width === 0 || rect.height === 0) return;
+
+                        // Check if it's inside a button or actionable element
+                        let container = null;
+                        let parent = el.parentElement;
+                        while (parent && parent !== document.body) {
+                             const tag = parent.tagName.toLowerCase();
+                             if (tag === 'button' || tag === 'a' || parent.getAttribute('role') === 'button') {
+                                 const pRect = parent.getBoundingClientRect();
+                                 container = {
+                                     tag: tag,
+                                     id: parent.id,
+                                     text: parent.innerText,
+                                     rect: { x: pRect.x, y: pRect.y, width: pRect.width, height: pRect.height }
+                                 };
+                                 break;
+                             }
+                             parent = parent.parentElement;
+                        }
+
+                        progressIndicators.push({
+                            tag: el.tagName.toLowerCase(),
+                            class: el.className,
+                            role: el.getAttribute('role'),
+                            text: el.innerText || '',
+                            rect: {
+                                x: rect.x,
+                                y: rect.y,
+                                width: rect.width,
+                                height: rect.height
+                            },
+                            container: container
+                        });
+                    });
+
+                    return {
+                        elements: foundElements,
+                        status_components: {
+                            nav_items: navItems,
+                            breadcrumbs: breadcrumbs,
+                            progress_indicators: progressIndicators
+                        }
+                    };
                 }""")
                 
                 browser.close()
+                results = result_data
         except Exception as e:
             self.logger.error(f"Error extracting elements: {e}")
             raise e
