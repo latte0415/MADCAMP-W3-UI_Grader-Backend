@@ -231,15 +231,15 @@ async def test_update_run_memory() -> None:
 
 if __name__ == "__main__": 
 
-    # print("=" * 50)
-    # print("AI Skeleton Test 시작")
-    # print("=" * 50)
-    # try:
-    #     asyncio.run(test_ai_skeleton())
-    #     print("✓ ai_skeleton 테스트 통과")
-    # except Exception as e:
-    #     print(f"✗ ai_skeleton 테스트 실패: {e}")
-    #     sys.exit(1)
+    print("=" * 50)
+    print("AI Skeleton Test 시작")
+    print("=" * 50)
+    try:
+        asyncio.run(test_ai_skeleton())
+        print("✓ ai_skeleton 테스트 통과")
+    except Exception as e:
+        print(f"✗ ai_skeleton 테스트 실패: {e}")
+        sys.exit(1)
     
     # print("=" * 50)
     # print("AI Calculator Tools Test 시작")

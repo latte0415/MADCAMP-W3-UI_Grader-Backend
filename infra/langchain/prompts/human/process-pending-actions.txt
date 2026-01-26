@@ -1,0 +1,21 @@
+다음 정보를 바탕으로 pending actions들을 검토하고 처리해줘.
+
+현재 메모리 (run_memory):
+{run_memory}
+
+Pending Actions 리스트 (이전에 처리하지 못했던 액션들):
+{input_actions}
+
+각 pending action의 정보:
+- action_type: 액션 타입 (fill, click 등)
+- action_target: 액션 타겟 설명
+- action_value: 현재 액션 값 (보통 비어있음)
+
+중요 규칙 (반드시 지켜야 함):
+1. 처리할 수 없는 액션: 메모리에서 적절한 입력값을 찾을 수 없는 액션은 최종 답변에 포함하지 말아줘.
+
+2. 처리 가능한 액션: 메모리에서 적절한 입력값을 찾을 수 있는 액션만 최종 답변에 포함해줘.
+   - 반환할 때는 원본 액션의 모든 필드(action_type, action_target 등)를 그대로 포함하고, action_value만 적절한 값으로 채워서 반환해줘.
+   - run_memory가 업데이트되었을 수 있으므로, 이전에 처리하지 못했던 액션도 이제는 처리할 수 있을 수 있어.
+
+3. JSON 형식으로 정확하게 응답해줘. actions 필드에 처리 가능한 액션 리스트를 포함해줘.

@@ -99,3 +99,43 @@ def create_edge(edge_data: Dict) -> Dict:
     if result.data and len(result.data) > 0:
         return result.data[0]
     raise Exception("엣지 생성 실패: 데이터가 반환되지 않았습니다.")
+
+
+def get_edge_by_id(edge_id: UUID) -> Optional[Dict]:
+    """
+    엣지 ID로 엣지 조회
+    
+    Args:
+        edge_id: 엣지 ID
+    
+    Returns:
+        엣지 정보 딕셔너리 또는 None
+    """
+    supabase = get_client()
+    result = supabase.table("edges").select("*").eq("id", str(edge_id)).execute()
+    
+    if result.data and len(result.data) > 0:
+        return result.data[0]
+    return None
+
+
+def update_edge_intent_label(edge_id: UUID, intent_label: str) -> Dict:
+    """
+    엣지의 intent_label 필드 업데이트
+    
+    Args:
+        edge_id: 엣지 ID
+        intent_label: 의도 라벨 (15자 이내 권장)
+    
+    Returns:
+        업데이트된 엣지 정보 딕셔너리
+    
+    Raises:
+        Exception: 업데이트 실패 시
+    """
+    supabase = get_client()
+    result = supabase.table("edges").update({"intent_label": intent_label}).eq("id", str(edge_id)).execute()
+    
+    if result.data and len(result.data) > 0:
+        return result.data[0]
+    raise Exception("엣지 intent_label 업데이트 실패: 데이터가 반환되지 않았습니다.")

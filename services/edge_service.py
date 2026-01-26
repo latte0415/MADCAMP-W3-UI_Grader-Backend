@@ -1,11 +1,13 @@
 """엣지(액션) 서비스"""
 import time
+import asyncio
 from typing import Dict, Optional
 from uuid import UUID
 from playwright.async_api import Page
 
 from repositories import edge_repository
 from repositories import node_repository
+from services.ai_service import AiService
 from utils.graph_classifier import classify_change, compute_next_depths
 from utils.action_extractor import parse_action_target
 
@@ -69,6 +71,7 @@ class EdgeService:
             
             if action_type == "click":
                 href = action.get("href")
+                before_url = page.url  # 클릭 전 URL 저장
                 if selector:
                     await page.wait_for_selector(selector, timeout=5000, state="attached")
                     locator = page.locator(selector).first
@@ -296,7 +299,7 @@ class EdgeService:
             else:
                 self.node_repo.update_node_depths(to_node_id, depths)
         
-        return self.record_edge(
+        edge = self.record_edge(
             run_id=run_id,
             from_node_id=from_node_id,
             to_node_id=to_node_id,
@@ -306,6 +309,19 @@ class EdgeService:
             error_msg=action_result["error_msg"],
             depth_diff_type=depth_diff_type
         )
+        
+        # 엣지 생성 후 intent_label 생성 (from_node != to_node인 경우만)
+        if edge and edge.get("from_node_id") and edge.get("to_node_id") and edge.get("from_node_id") != edge.get("to_node_id"):
+            edge_id = UUID(edge["id"])
+            # 비동기 작업을 백그라운드에서 실행 (에러 발생 시 로그만 남기고 계속 진행)
+            try:
+                ai_service = AiService()
+                asyncio.create_task(ai_service.guess_and_update_edge_intent(edge_id))
+            except Exception as e:
+                # 비동기 작업 생성 실패는 로그만 남기고 계속 진행
+                print(f"[perform_and_record_edge] intent_label 생성 작업 시작 실패: {e}")
+        
+        return edge
 
 
 # 하위 호환성을 위한 함수 래퍼
