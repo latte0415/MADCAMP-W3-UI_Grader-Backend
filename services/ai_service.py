@@ -1,5 +1,5 @@
 from infra.langchain.config.context import set_run_id, set_from_node_id
-from typing import Dict, Optional, Any, List
+from typing import Dict, Optional, Any, List, Tuple
 from uuid import UUID
 
 from infra.langchain.runnables.chain import run_chain
@@ -81,7 +81,7 @@ class AiService:
         Args:
             action: 액션 딕셔너리
             include_selector: selector, role, name을 키에 포함할지 여부
-            
+        
         Returns:
             액션 식별 키 튜플
         """
@@ -98,6 +98,53 @@ class AiService:
                 action.get("action_type", ""),
                 action.get("action_target", "")
             )
+
+    def _dicts_are_different(
+        self,
+        old_dict: Dict[str, Any],
+        new_dict: Dict[str, Any]
+    ) -> bool:
+        """
+        두 딕셔너리가 다른지 재귀적으로 비교합니다.
+        
+        Args:
+            old_dict: 이전 딕셔너리
+            new_dict: 새로운 딕셔너리
+        
+        Returns:
+            다르면 True, 같으면 False
+        """
+        # 키가 다르면 다름
+        if set(old_dict.keys()) != set(new_dict.keys()):
+            return True
+        
+        # 각 값 비교
+        for key in old_dict.keys():
+            old_value = old_dict[key]
+            new_value = new_dict[key]
+            
+            # 둘 다 딕셔너리면 재귀 비교
+            if isinstance(old_value, dict) and isinstance(new_value, dict):
+                if self._dicts_are_different(old_value, new_value):
+                    return True
+            # 둘 다 리스트면 비교
+            elif isinstance(old_value, list) and isinstance(new_value, list):
+                if len(old_value) != len(new_value):
+                    return True
+                for i, old_item in enumerate(old_value):
+                    if i >= len(new_value):
+                        return True
+                    new_item = new_value[i]
+                    if isinstance(old_item, dict) and isinstance(new_item, dict):
+                        if self._dicts_are_different(old_item, new_item):
+                            return True
+                    elif old_item != new_item:
+                        return True
+            # 그 외는 직접 비교
+            elif old_value != new_value:
+                return True
+        
+        return False
 
     async def get_ai_response(self) -> str:
         """chat-test chain 실행. Returns: AI 응답 문자열."""
@@ -132,7 +179,7 @@ class AiService:
         image_base64: str,
         run_id: UUID,
         auxiliary_data: Optional[Dict[str, Any]] = None
-    ) -> str:
+    ) -> Tuple[Dict, bool]:
         """
         이미지와 run_id를 포함하여 run_memory를 업데이트합니다.
         
@@ -142,7 +189,8 @@ class AiService:
             auxiliary_data: 보조 자료 딕셔너리 (사용자가 인지할 수 있는 정보만)
         
         Returns:
-            업데이트된 run_memory 정보 딕셔너리 (문자열로 변환)
+            (업데이트된 run_memory 정보 딕셔너리, 수정사항 여부) 튜플
+            - 수정사항이 있으면 True, 없으면 False
         """
         # 1. 현재 run_memory 조회
         run_memory_content = self._get_run_memory_content(run_id)
@@ -156,13 +204,16 @@ class AiService:
             use_vision=True
         )
         
-        # 3. Chain 결과에서 content 추출 및 run_memory 업데이트
+        # 3. Chain 결과에서 content 추출
         updated_content = self._extract_content_from_result(result, run_memory_content)
         
-        # 4. run_memory 실제 업데이트
+        # 4. 수정사항 확인 (업데이트 전후 비교)
+        has_changes = self._dicts_are_different(run_memory_content, updated_content)
+        
+        # 5. run_memory 실제 업데이트
         updated_memory = update_run_memory(run_id, updated_content)
         
-        return str(updated_memory)
+        return (updated_memory, has_changes)
 
     async def filter_input_actions_with_run_memory(
         self,
