@@ -23,12 +23,22 @@ else:
 
 callback_handler = StdOutCallbackHandler()
 
-def get_llm():
+def get_llm(model: str = "gpt-4o-mini"):
+    """
+    LLM 인스턴스를 반환합니다.
+    
+    Args:
+        model: 사용할 모델명 (기본값: "gpt-4o-mini")
+              Vision이 필요한 경우 "gpt-4o" 사용
+    
+    Returns:
+        ChatOpenAI 인스턴스
+    """
     if not OPENAI_API_KEY:
         raise ValueError("OPENAI_API_KEY environment variable is not set")
     
     llm = ChatOpenAI(
-        model="gpt-4o-mini",
+        model=model,
         temperature=0.5,
         max_tokens=1024,
         timeout=30,

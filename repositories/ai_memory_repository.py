@@ -28,7 +28,6 @@ def get_run_memory(run_id: UUID) -> Optional[Dict]:
         return result.data[0]
     return None
 
-
 def create_run_memory(run_id: UUID, content: Dict) -> Dict:
     """
     run_memory 생성
@@ -55,6 +54,13 @@ def create_run_memory(run_id: UUID, content: Dict) -> Dict:
         return result.data[0]
     raise Exception("run_memory 생성 실패: 데이터가 반환되지 않았습니다.")
 
+def view_run_memory(run_id: UUID) -> Optional[Dict]:
+    current = get_run_memory(run_id)
+    if current:
+        return current
+    else:
+        create_run_memory(run_id, {})
+        return get_run_memory(run_id)
 
 def update_run_memory(run_id: UUID, content: Dict) -> Dict:
     """
