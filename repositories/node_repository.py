@@ -11,7 +11,8 @@ def find_node_by_conditions(
     run_id: UUID,
     url_normalized: str,
     a11y_hash: str,
-    state_hash: str
+    state_hash: str,
+    input_state_hash: str
 ) -> Optional[Dict]:
     """
     조건에 맞는 노드 조회
@@ -21,17 +22,35 @@ def find_node_by_conditions(
         url_normalized: 정규화된 URL
         a11y_hash: 접근성 해시
         state_hash: 상태 해시
+        input_state_hash: 입력 상태 해시
     
     Returns:
         노드 정보 딕셔너리 또는 None
+    
+    Note:
+        같은 입력 상태(input_state_hash)를 가진 노드를 우선적으로 찾습니다.
+        입력 상태가 같으면 a11y_hash 차이는 무시합니다.
     """
     supabase = get_client()
+    
+    # 1. 모든 조건이 일치하는 노드 찾기 (기존 로직)
     result = supabase.table("nodes").select("*").eq("run_id", str(run_id)).eq(
         "url_normalized", url_normalized
-    ).eq("a11y_hash", a11y_hash).eq("state_hash", state_hash).execute()
+    ).eq("a11y_hash", a11y_hash).eq("state_hash", state_hash).eq("input_state_hash", input_state_hash).execute()
     
     if result.data and len(result.data) > 0:
         return result.data[0]
+    
+    # 2. 입력 상태가 같으면 같은 노드로 인식 (a11y_hash는 무시)
+    # 같은 입력 상태면 같은 노드로 봐야 함 (같은 값 입력 시 같은 노드)
+    if input_state_hash:
+        result = supabase.table("nodes").select("*").eq("run_id", str(run_id)).eq(
+            "url_normalized", url_normalized
+        ).eq("state_hash", state_hash).eq("input_state_hash", input_state_hash).execute()
+        
+        if result.data and len(result.data) > 0:
+            return result.data[0]
+    
     return None
 
 

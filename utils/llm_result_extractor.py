@@ -36,22 +36,22 @@ def format_auxiliary_data_for_input(auxiliary_data: Optional[Dict[str, Any]]) ->
     return auxiliary_text
 
 
-def extract_filter_action_result(result: Any) -> List[Dict[str, Any]]:
+def extract_final_response_result(result: Any) -> List[Dict[str, Any]]:
     """
-    LLM 결과에서 filter_action 툴의 반환값을 추출합니다.
+    LLM 결과에서 final_response 툴의 반환값을 추출합니다.
     
     Args:
         result: AgentExecutor 실행 결과
     
     Returns:
-        필터링된 액션 리스트 (파싱 실패 시 빈 리스트)
+        처리 가능한 액션 리스트 (파싱 실패 시 빈 리스트)
     """
     try:
         # result가 딕셔너리이고 intermediate_steps가 있는 경우
         if isinstance(result, dict) and "intermediate_steps" in result:
             for action, observation in result["intermediate_steps"]:
-                # filter_action 툴 호출 확인
-                if hasattr(action, "tool") and action.tool == "filter_action":
+                # final_response 툴 호출 확인
+                if hasattr(action, "tool") and action.tool == "final_response":
                     # observation이 dict이고 "actions" 키가 있으면 사용
                     if isinstance(observation, dict) and "actions" in observation:
                         return observation["actions"]
@@ -77,8 +77,8 @@ def extract_filter_action_result(result: Any) -> List[Dict[str, Any]]:
                     pass
         
         # 파싱 실패 시 빈 리스트 반환
-        print(f"[extract_filter_action_result] filter_action 툴 결과를 찾을 수 없음. result: {result}")
+        print(f"[extract_final_response_result] final_response 툴 결과를 찾을 수 없음. result: {result}")
         return []
     except Exception as e:
-        print(f"[extract_filter_action_result] 에러: {e}")
+        print(f"[extract_final_response_result] 에러: {e}")
         return []

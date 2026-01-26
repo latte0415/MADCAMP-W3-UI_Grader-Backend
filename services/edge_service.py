@@ -66,8 +66,6 @@ class EdgeService:
             role = action.get("role")
             name = action.get("name")
             selector = action.get("selector")
-            before_url = page.url
-            print(f"[perform_action] type={action_type} role={role} name={name} selector={selector} url={before_url}")
             
             if action_type == "click":
                 href = action.get("href")
@@ -103,37 +101,74 @@ class EdgeService:
                     raise Exception("hover: 대상 요소를 찾을 수 없습니다.")
                 await page.wait_for_timeout(400)
             elif action_type == "fill":
-                if selector:
-                    await page.fill(selector, action_value)
-                elif role and name:
-                    # role과 name으로 요소 찾기
-                    locator = page.get_by_role(role, name=name)
-                    await locator.fill(action_value)
-                else:
-                    # action_target에서 role과 name 파싱 시도
-                    # action_target 형식: "role=textbox name=E-mail"
-                    if not role and not name:
+                filled_element = None
+                # role과 name이 있으면 우선 사용 (가장 정확함)
+                if role and name:
+                    try:
+                        locator = page.get_by_role(role, name=name)
+                        # 요소가 정확히 하나인지 확인
+                        count = await locator.count()
+                        if count == 1:
+                            filled_element = await locator.element_handle()
+                            await locator.fill(action_value)
+                        elif count > 1:
+                            # 여러 요소가 있으면 첫 번째 사용
+                            await locator.first.fill(action_value)
+                        else:
+                            raise Exception(f"fill: role={role} name={name}로 요소를 찾을 수 없습니다.")
+                    except Exception as e:
+                        # role+name 실패 시 action_target 파싱 시도
                         action_target = action.get("action_target", "")
                         parsed_role, parsed_name = parse_action_target(action_target)
                         if parsed_role and parsed_name:
                             locator = page.get_by_role(parsed_role, name=parsed_name)
-                            await locator.fill(action_value)
+                            count = await locator.count()
+                            if count == 1:
+                                await locator.fill(action_value)
+                            elif count > 1:
+                                await locator.first.fill(action_value)
+                            else:
+                                raise Exception(f"fill: action_target 파싱으로도 요소를 찾을 수 없습니다.")
+                        elif selector:
+                            # 마지막 수단: selector 사용
+                            await page.fill(selector, action_value)
                         else:
                             raise Exception("fill: 대상 요소를 찾을 수 없습니다.")
+                # role과 name이 없으면 action_target 파싱 시도
+                elif not role and not name:
+                    action_target = action.get("action_target", "")
+                    parsed_role, parsed_name = parse_action_target(action_target)
+                    if parsed_role and parsed_name:
+                        locator = page.get_by_role(parsed_role, name=parsed_name)
+                        count = await locator.count()
+                        if count == 1:
+                            await locator.fill(action_value)
+                        elif count > 1:
+                            await locator.first.fill(action_value)
+                        else:
+                            if selector:
+                                await page.fill(selector, action_value)
+                            else:
+                                raise Exception("fill: 대상 요소를 찾을 수 없습니다.")
+                    elif selector:
+                        # 마지막 수단: selector 사용
+                        await page.fill(selector, action_value)
                     else:
                         raise Exception("fill: 대상 요소를 찾을 수 없습니다.")
+                # selector만 있는 경우
+                elif selector:
+                    await page.fill(selector, action_value)
+                else:
+                    raise Exception("fill: 대상 요소를 찾을 수 없습니다.")
             elif action_type == "navigate":
                 await page.goto(action_value, wait_until="networkidle")
             elif action_type == "wait":
                 await page.wait_for_load_state("networkidle")
             else:
                 raise Exception(f"알 수 없는 action_type: {action_type}")
-            after_url = page.url
-            print(f"[perform_action] done url={after_url}")
         except Exception as e:
             outcome = "fail"
             error_msg = str(e)
-            print(f"[perform_action] error={error_msg}")
         
         latency_ms = int((time.time() - start_time) * 1000)
         return {"outcome": outcome, "latency_ms": latency_ms, "error_msg": error_msg}
@@ -242,9 +277,14 @@ class EdgeService:
                     to_node_created = False
             
             to_node_id = UUID(to_node["id"])
-            print(f"[perform_and_record_edge] to_node_id={to_node_id}")
-        else:
-            print("[perform_and_record_edge] action failed; skip to_node")
+            
+            # 같은 노드로 가는 기존 엣지가 있으면 삭제 (중복 방지)
+            if to_node_id:
+                from repositories.edge_repository import find_edge_by_nodes, delete_edge
+                existing_edge = find_edge_by_nodes(run_id, from_node_id, to_node_id)
+                if existing_edge:
+                    # 기존 엣지 삭제 (무효화)
+                    delete_edge(UUID(existing_edge["id"]))
         
         if depth_diff_type is None and before_node:
             depth_diff_type = await classify_change(before_node, to_node, page)

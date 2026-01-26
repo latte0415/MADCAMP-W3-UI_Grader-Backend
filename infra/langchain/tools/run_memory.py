@@ -1,7 +1,7 @@
-"""run_memory·filter-action 툴 (view_memory, update_memory, save_action, filter_action)."""
+"""run_memory·filter-action 툴 (view_memory, update_memory, save_action, final_response)."""
 from langchain_core.tools import tool
 from pydantic import BaseModel, Field
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from infra.langchain.config.context import get_run_id, get_from_node_id
 from repositories.ai_memory_repository import (
     view_run_memory, update_run_memory, create_pending_action
@@ -62,7 +62,7 @@ class ActionDict(BaseModel):
     role: str = Field(default="", description="ARIA role")
     name: str = Field(default="", description="요소 이름")
     tag: str = Field(default="", description="HTML 태그명")
-    href: str = Field(default="", description="링크 href")
+    href: Optional[str] = Field(default="", description="링크 href")
     input_type: str = Field(default="", description="입력 필드 타입")
     placeholder: str = Field(default="", description="placeholder")
 
@@ -81,7 +81,7 @@ def save_action(
     placeholder: str = ""
 ) -> dict:
     """
-    현재 처리할 수 없는 Input 액션을 pending_action에 보관합니다.
+    현재 기억으로 도저히 처리할 수 없는 Input 액션을 pending_action에 보관합니다.
     
     LLM이 현재 메모리나 컨텍스트로는 적절한 입력값을 생성할 수 없는 액션을
     나중에 처리하기 위해 pending_action에 저장합니다.
@@ -127,34 +127,44 @@ def save_action(
         return {"error": f"pending_action 저장 실패: {str(e)}"}
 
 
-class FilteredActions(BaseModel):
-    """처리 가능한 액션 리스트 (filter_action 툴용)"""
+class FinalResponse(BaseModel):
+    """처리 가능한 액션 리스트 (최종 답변용). """
     actions: List[Dict[str, Any]] = Field(
-        description="처리 가능한 액션 리스트. 각 액션은 action_value가 채워진 딕셔너리 형태여야 합니다."
+        description="처리 가능한 액션 리스트. 각 액션은 action_value가 채워진 딕셔너리 형태여야 합니다. 없을 경우, 빈 리스트를 반환해도 됩니다. 사용하자마자 종료할 것."
     )
 
 
-@tool(args_schema=FilteredActions)
-def filter_action(actions: List[Dict[str, Any]]) -> dict:
+@tool(args_schema=FinalResponse)
+def final_response(actions: List[Dict[str, Any]]) -> dict:
     """
-    현재 처리할 수 있는 Input 액션만 입력값과 함께 반환합니다.
+    처리 가능한 Input 액션만 입력값과 함께 최종 답변으로 반환합니다.
     
-    이 도구는 반드시 최종에만 사용해야 합니다. LLM이 view_memory와 save_action을 사용하여
-    처리할 수 없는 액션을 pending_action에 저장한 후, 처리 가능한 액션만 이 도구로 반환합니다.
+    이 도구는 반드시 최종에 한 번만 사용해야 합니다. 모든 액션을 검토한 후,
+    처리 가능한 액션만 이 도구로 최종 답변으로 반환합니다.
+    
+    중요: 각 액션은 원본 액션의 모든 필드를 포함해야 합니다:
+        - action_type: 액션 타입 (필수)
+        - action_target: 액션 타겟 (필수)
+        - action_value: 액션 값 (fill 액션의 경우 필수, 적절한 값으로 채워야 함)
+        - role: ARIA role (요소 식별에 필요)
+        - name: 요소 이름 (요소 식별에 필요)
+        - selector: CSS selector (요소 식별에 필요)
+        - 기타 원본 액션의 모든 필드
     
     Args:
-        actions: 처리 가능한 액션 리스트. 각 액션은 다음 필드를 포함해야 합니다:
-            - action_type: 액션 타입 (필수)
-            - action_target: 액션 타겟 (필수)
-            - action_value: 액션 값 (fill 액션의 경우 필수)
-            - selector, role, name 등 기타 필드 (선택적)
+        actions: 처리 가능한 액션 리스트. 각 액션은 원본 액션의 모든 필드를 포함하고,
+                action_value만 적절한 값으로 채워서 반환해야 합니다.
     
     Returns:
         {"actions": [...]} 형태의 딕셔너리
     """
-    print(f"[FilterAction] 처리 가능한 액션 {len(actions)}개 반환")
+    print(f"[FinalResponse] 처리 가능한 액션 {len(actions)}개 반환")
+    # 디버깅: 첫 번째 액션의 필드 확인
+    if actions:
+        first_action = actions[0]
+        print(f"[FinalResponse] 첫 번째 액션 필드: role={first_action.get('role')}, name={first_action.get('name')}, selector={first_action.get('selector')}")
     return {"actions": actions}
 
 
 update_run_memory_tools = [view_memory, update_memory]
-filter_action_tools = [view_memory, save_action, filter_action]
+filter_action_tools = [view_memory, save_action, final_response]

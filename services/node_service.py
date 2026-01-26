@@ -11,7 +11,8 @@ from utils.hash_generator import (
     generate_storage_fingerprint,
     generate_state_hash,
     generate_a11y_hash,
-    generate_content_dom_hash
+    generate_content_dom_hash,
+    generate_input_state_hash
 )
 from utils.state_collector import collect_page_state
 
@@ -124,15 +125,19 @@ class NodeService:
         content_elements = page_state["content_elements"]
         content_dom_hash = generate_content_dom_hash(content_elements)
         
-        # 7. 기존 노드 확인 (Repository 사용)
+        # 7. 입력 상태 해시 생성
+        input_values = page_state.get("input_values", {})
+        input_state_hash = generate_input_state_hash(input_values)
+        
+        # 8. 기존 노드 확인 (Repository 사용)
         existing = self.node_repo.find_node_by_conditions(
-            run_id, url_normalized, a11y_hash, state_hash
+            run_id, url_normalized, a11y_hash, state_hash, input_state_hash
         )
         
         if existing:
             return (existing, False) if return_created else existing
         
-        # 8. 노드 데이터 준비
+        # 9. 노드 데이터 준비
         node_data = {
             "run_id": str(run_id),
             "url": url,
@@ -140,6 +145,7 @@ class NodeService:
             "a11y_hash": a11y_hash,
             "content_dom_hash": content_dom_hash,
             "state_hash": state_hash,
+            "input_state_hash": input_state_hash,
             "auth_state": auth_state,
             "storage_fingerprint": storage_fingerprint,
             # 원본 파일 참조는 나중에 구현 (현재는 NULL)
@@ -156,13 +162,13 @@ class NodeService:
                 "interaction_depth": depths.get("interaction_depth")
             })
         
-        # 9. 새 노드 생성 (Repository 사용)
+        # 10. 새 노드 생성 (Repository 사용)
         try:
             node = self.node_repo.create_node(node_data)
             node_id = node["id"]
             base_path = f"runs/{run_id}/nodes/{node_id}"
             
-            # 10. 아티팩트 업로드 및 ref 업데이트
+            # 11. 아티팩트 업로드 및 ref 업데이트
             # DOM 스냅샷 (HTML)
             dom_snapshot = await page.content()
             dom_ref = self._upload_artifact(

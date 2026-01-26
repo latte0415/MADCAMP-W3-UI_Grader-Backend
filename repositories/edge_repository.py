@@ -39,6 +39,47 @@ def find_duplicate_edge(
     return None
 
 
+def find_edge_by_nodes(
+    run_id: UUID,
+    from_node_id: UUID,
+    to_node_id: UUID
+) -> Optional[Dict]:
+    """
+    같은 노드 간 엣지 조회
+    
+    Args:
+        run_id: 탐색 세션 ID
+        from_node_id: 시작 노드 ID
+        to_node_id: 종료 노드 ID
+    
+    Returns:
+        기존 엣지 데이터 또는 None
+    """
+    supabase = get_client()
+    result = supabase.table("edges").select("*").eq("run_id", str(run_id)).eq(
+        "from_node_id", str(from_node_id)
+    ).eq("to_node_id", str(to_node_id)).execute()
+    
+    if result.data and len(result.data) > 0:
+        return result.data[0]
+    return None
+
+
+def delete_edge(edge_id: UUID) -> bool:
+    """
+    엣지 삭제
+    
+    Args:
+        edge_id: 엣지 ID
+    
+    Returns:
+        삭제 성공 여부
+    """
+    supabase = get_client()
+    result = supabase.table("edges").delete().eq("id", str(edge_id)).execute()
+    return result.data is not None
+
+
 def create_edge(edge_data: Dict) -> Dict:
     """
     엣지 생성

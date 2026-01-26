@@ -128,8 +128,14 @@ async def collect_a11y_info(page: Page) -> List[str]:
             aria_summary = ",".join(aria_parts)
             
             # 텍스트 콘텐츠 가져오기 (처음 50자만)
+            # 입력 필드(input, textarea)는 inner_text() 대신 value 속성 사용
             try:
-                name = (await element.inner_text()).strip()[:50]
+                if tag in ("input", "textarea"):
+                    # 입력 필드는 value 속성 사용 (inner_text()는 빈 문자열일 수 있음)
+                    name = (await element.evaluate("el => el.value || ''"))[:50]
+                else:
+                    # 다른 요소는 inner_text() 사용
+                    name = (await element.inner_text()).strip()[:50]
             except:
                 name = ""
             
@@ -150,6 +156,71 @@ async def collect_a11y_info(page: Page) -> List[str]:
             continue
     
     return a11y_info
+
+
+async def collect_input_values(page: Page) -> Dict[str, str]:
+    """
+    입력 필드의 값들을 수집합니다.
+    
+    Args:
+        page: Playwright Page 객체
+    
+    Returns:
+        입력 필드 값 딕셔너리 {key: value}
+        key는 action_extractor와 동일한 방식으로 생성된 action_target 형식
+    """
+    from utils.action_extractor import _get_role, _get_name, _build_selector
+    
+    input_values = {}
+    
+    # input, textarea, select 요소 수집
+    input_selectors = ["input", "textarea", "select"]
+    
+    for selector in input_selectors:
+        try:
+            elements = await page.query_selector_all(selector)
+            for element in elements:
+                try:
+                    # 요소가 visible한지 확인
+                    if not await element.is_visible():
+                        continue
+                    
+                    # input type 확인
+                    input_type = await element.get_attribute("type") or "text"
+                    tag = (await element.evaluate("el => el.tagName") or "").lower()
+                    
+                    # 값 가져오기
+                    value = await element.evaluate("el => el.value")
+                    
+                    # 빈 값은 스킵
+                    if not value:
+                        continue
+                    
+                    # action_extractor와 동일한 방식으로 role, name, selector 추출
+                    role = (await _get_role(element)) or ""
+                    name = await _get_name(element)
+                    selector_str = await _build_selector(element)
+                    
+                    # action_target 형식으로 key 생성 (action_extractor의 _make_action과 동일)
+                    action_target = f"role={role} name={name}".strip()
+                    if not role and not name:
+                        action_target = selector_str
+                    
+                    # password 타입은 해시만 저장
+                    if input_type == "password":
+                        import hashlib
+                        value_hash = hashlib.sha256(value.encode()).hexdigest()[:16]
+                        input_values[action_target] = f"<hashed:{value_hash}>"
+                    else:
+                        input_values[action_target] = value[:200]  # 최대 200자만
+                        
+                except Exception:
+                    # 요소 접근 실패 시 스킵
+                    continue
+        except Exception:
+            continue
+    
+    return input_values
 
 
 async def collect_content_elements(page: Page) -> List[str]:
@@ -211,10 +282,14 @@ async def collect_page_state(page: Page) -> Dict:
     # 콘텐츠 요소 수집 (선택적)
     content_elements = await collect_content_elements(page)
     
+    # 입력 필드 값 수집
+    input_values = await collect_input_values(page)
+    
     return {
         "url": url,
         "storage_state": storage_state,
         "auth_state": auth_state,
         "a11y_info": a11y_info,
-        "content_elements": content_elements
+        "content_elements": content_elements,
+        "input_values": input_values
     }

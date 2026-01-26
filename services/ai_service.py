@@ -8,7 +8,7 @@ from infra.langchain.runnables.agent import get_agent
 from infra.langchain.config.executor import ainvoke_runnable
 from infra.langchain.config.context import set_run_id as set_run_id_context
 from infra.langchain.prompts import get_human_input, create_human_message_with_image
-from utils.llm_result_extractor import format_auxiliary_data_for_input, extract_filter_action_result
+from utils.llm_result_extractor import format_auxiliary_data_for_input, extract_final_response_result
         
 
 class AiService:
@@ -116,5 +116,5 @@ class AiService:
             step_label="agent",
         )
         
-        # LLM 결과에서 filter_action 툴의 반환값 추출
-        return extract_filter_action_result(result)
+        # LLM 결과에서 final_response 툴의 반환값 추출
+        return extract_final_response_result(result)
