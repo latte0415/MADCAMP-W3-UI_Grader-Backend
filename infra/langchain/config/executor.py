@@ -3,26 +3,20 @@ import time
 from typing import Any
 from langchain_core.runnables import Runnable
 from langchain_core.exceptions import OutputParserException
-import sys
-import os
-
-# 프로젝트 루트 경로를 sys.path에 추가
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))))
-from exceptions import InfrastructureException
 
 MAX_RETRIES = 3
 DELAY = 1  # 재시도 간 대기 시간 (초)
 
 
 async def ainvoke_runnable(
-    chain: Runnable,
+    runnable: Runnable,
     variables: dict[str, Any],
     step_label: str = "",
     config: dict[str, Any] | None = None,
 ) -> Any:
     """
     Runnable을 비동기적으로 실행하며, 재시도 옵션을 지원합니다.
-    Infrastructure 레이어: 에러 발생 시 InfrastructureException을 발생시킵니다.
+    Infrastructure 레이어: 에러 발생 시 RuntimeError를 발생시킵니다.
     
     Args:
         chain: 실행할 LangChain Runnable 객체
@@ -34,7 +28,7 @@ async def ainvoke_runnable(
         체인 실행 결과
     
     Raises:
-        InfrastructureException: 체인 실행 실패 시
+        RuntimeError: 체인 실행 실패 시
     """
     last_error = None
     start = time.time()
@@ -43,7 +37,7 @@ async def ainvoke_runnable(
 
     for attempt in range(MAX_RETRIES):
         try:
-            response = await chain.ainvoke(variables, config=merged_config)
+            response = await runnable.ainvoke(variables, config=merged_config)
             return response
         except OutputParserException as e:
             # OutputParserException은 LLM 응답 파싱 실패를 의미
@@ -57,12 +51,12 @@ async def ainvoke_runnable(
             last_error = error_msg
             print(error_msg)
             # OutputParserException은 재시도해도 같은 문제가 발생할 가능성이 높으므로 즉시 실패 처리
-            raise InfrastructureException(error_msg) from e
+            raise RuntimeError(error_msg) from e
         except Exception as e:
             last_error = f"[{step_label}] invoke 에러 (시도 {attempt + 1}/{MAX_RETRIES}): {e!s}"
             print(last_error)
             if attempt < MAX_RETRIES - 1:
                 await asyncio.sleep(DELAY)
     
-    # 모든 재시도 실패 시 InfrastructureException 발생
-    raise InfrastructureException(last_error or f"[{step_label}] 체인 실행 실패")
+    # 모든 재시도 실패 시 RuntimeError 발생
+    raise RuntimeError(last_error or f"[{step_label}] 체인 실행 실패")
