@@ -5,56 +5,22 @@ Infrastructure 레이어: LangChain Agent 실행
 Function Calling 방식 사용 (OpenAI Tools Agent)
 """
 
-import os
-
 from langchain_core.runnables import Runnable
 from langchain.agents import create_openai_tools_agent, AgentExecutor
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from infra.langchain.config.llm import get_llm
 from infra.langchain.config.executor import ainvoke_runnable
-from infra.langchain.tools import get_tools_for_label
-
-# runnables 상위에서 prompts 디렉토리 찾기
-_PROMPT_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "prompts")
-
-
-def _get_human_input(label: str) -> str:
-    """prompts/human/{label}.txt 내용을 읽어 반환 (사전 세팅용 input 값)."""
-    path = os.path.join(_PROMPT_DIR, "human", f"{label}.txt")
-    if not os.path.isfile(path):
-        raise FileNotFoundError(f"Human prompt '{label}' not found at {path}")
-    with open(path, encoding="utf-8") as f:
-        return f.read().strip()
-
-
-def get_agent_prompt(label: str = "chat-test") -> ChatPromptTemplate:
-    """
-    prompts/system/{label}.txt 를 읽어 Agent용 ChatPromptTemplate을 반환합니다.
-    Human 메시지는 {input} 플레이스홀더로 두고, 실제 값은 run_agent에서
-    prompts/human/{label}.txt 내용을 읽어 {"input": ...} 으로 전달합니다.
-
-    Args:
-        label: 프롬프트 레이블 (파일명). 예: "chat-test", "tool-test"
-
-    Returns:
-        ChatPromptTemplate (get_agent용)
-    """
-    path_system = os.path.join(_PROMPT_DIR, "system", f"{label}.txt")
-    system_content = ""
-    if os.path.isfile(path_system):
-        with open(path_system, encoding="utf-8") as f:
-            system_content = f.read().strip()
-
-    return ChatPromptTemplate.from_messages([
-        ("system", system_content or "You are a helpful assistant."),
-        ("human", "{input}"),
-        MessagesPlaceholder(variable_name="agent_scratchpad"),
-    ])
+from infra.langchain.prompts import get_human_input, get_agent_prompt
+from infra.langchain.tools import get_tools_for_label, get_tool_choice_for_label
 
 
 def get_agent(label: str = "chat-test") -> Runnable:
     llm = get_llm()
     tools = get_tools_for_label(label)
+    tool_choice = get_tool_choice_for_label(label)
+
+    # tool_choice가 설정되어 있으면 LLM에 bind
+    if tool_choice and tool_choice != "auto":
+        llm = llm.bind_tools(tools, tool_choice=tool_choice)
 
     prompt = get_agent_prompt(label=label)
     agent = create_openai_tools_agent(llm, tools, prompt)
@@ -72,7 +38,7 @@ def get_agent(label: str = "chat-test") -> Runnable:
 async def run_agent(label: str = "chat-test") -> str:
     try:
         agent_executor = get_agent(label=label)
-        human_input = _get_human_input(label)
+        human_input = get_human_input(label)
 
         result = await ainvoke_runnable(
             runnable=agent_executor,
