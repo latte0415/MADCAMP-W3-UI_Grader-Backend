@@ -7,6 +7,7 @@ from playwright.async_api import Page
 from repositories import edge_repository
 from repositories import node_repository
 from utils.graph_classifier import classify_change, compute_next_depths
+from utils.action_extractor import parse_action_target
 
 
 class EdgeService:
@@ -104,8 +105,23 @@ class EdgeService:
             elif action_type == "fill":
                 if selector:
                     await page.fill(selector, action_value)
+                elif role and name:
+                    # role과 name으로 요소 찾기
+                    locator = page.get_by_role(role, name=name)
+                    await locator.fill(action_value)
                 else:
-                    raise Exception("fill: 대상 요소를 찾을 수 없습니다.")
+                    # action_target에서 role과 name 파싱 시도
+                    # action_target 형식: "role=textbox name=E-mail"
+                    if not role and not name:
+                        action_target = action.get("action_target", "")
+                        parsed_role, parsed_name = parse_action_target(action_target)
+                        if parsed_role and parsed_name:
+                            locator = page.get_by_role(parsed_role, name=parsed_name)
+                            await locator.fill(action_value)
+                        else:
+                            raise Exception("fill: 대상 요소를 찾을 수 없습니다.")
+                    else:
+                        raise Exception("fill: 대상 요소를 찾을 수 없습니다.")
             elif action_type == "navigate":
                 await page.goto(action_value, wait_until="networkidle")
             elif action_type == "wait":

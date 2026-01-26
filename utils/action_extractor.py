@@ -1,9 +1,33 @@
 """DOM 기반 액션 추출 유틸리티"""
-from typing import Dict, List, Optional
+import re
+from typing import Dict, List, Optional, Tuple
 from playwright.async_api import Page, ElementHandle
 
 
+def parse_action_target(action_target: str) -> Tuple[Optional[str], Optional[str]]:
+    """
+    action_target 문자열에서 role과 name을 파싱합니다.
+    
+    Args:
+        action_target: "role=textbox name=E-mail" 형식의 문자열
+    
+    Returns:
+        (role, name) 튜플
+    """
+    if not action_target:
+        return None, None
+    
+    role_match = re.search(r"role=([^\s]+)", action_target)
+    name_match = re.search(r"name=(.+)", action_target)
+    
+    role = role_match.group(1) if role_match else None
+    name = name_match.group(1).strip() if name_match else None
+    
+    return role, name
+
+
 async def _get_role(element: ElementHandle) -> Optional[str]:
+    """요소의 ARIA role 또는 태그/타입 기반 추론 role 반환."""
     role = await element.get_attribute("role")
     if role:
         return role
@@ -21,6 +45,7 @@ async def _get_role(element: ElementHandle) -> Optional[str]:
 
 
 async def _get_name(element: ElementHandle) -> str:
+    """aria-label, placeholder, inner_text 순으로 요소 이름 추출."""
     aria_label = await element.get_attribute("aria-label")
     if aria_label:
         return aria_label.strip()
@@ -37,6 +62,7 @@ async def _get_name(element: ElementHandle) -> str:
 
 
 async def _build_selector(element: ElementHandle) -> str:
+    """href/id/name/class 순으로 CSS selector 생성."""
     tag = await element.evaluate("el => el.tagName.toLowerCase()")
     if tag == "a":
         href = await element.get_attribute("href")
@@ -58,6 +84,7 @@ async def _build_selector(element: ElementHandle) -> str:
 
 
 async def _make_action(action_type: str, element: ElementHandle, action_value: Optional[str] = None) -> Dict:
+    """요소로부터 action_type에 맞는 액션 딕셔너리 생성."""
     role = (await _get_role(element)) or ""
     name = await _get_name(element)
     selector = await _build_selector(element)

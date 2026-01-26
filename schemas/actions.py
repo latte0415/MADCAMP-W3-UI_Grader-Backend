@@ -127,5 +127,14 @@ class Action(BaseModel):
             return {"type": "role", "role": self.role, "name": self.name}
         return {"type": "unknown"}
     
+    def to_dict(self) -> dict:
+        """Action을 딕셔너리로 변환"""
+        return self.model_dump(exclude_none=False)
+    
+    @classmethod
+    def from_dict(cls, data: dict) -> "Action":
+        """딕셔너리에서 Action 생성"""
+        return cls(**data)
+    
     class Config:
         use_enum_values = True

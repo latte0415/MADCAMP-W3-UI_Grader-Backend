@@ -17,6 +17,7 @@ from utils.action_extractor import extract_actions_from_page
 
 
 def create_test_run(target_url: str, start_url: str) -> str:
+    """테스트용 run 생성. Args: target_url, start_url. Returns: run_id (UUID 문자열)."""
     supabase = get_client()
     run_data = {
         "target_url": target_url,
@@ -79,6 +80,7 @@ async def test_action_list(url: str) -> None:
 
 
 async def _save_screenshot(page, path: Path) -> None:
+    """페이지 전체 스크린샷을 path에 저장."""
     path.parent.mkdir(parents=True, exist_ok=True)
     await page.screenshot(path=str(path), full_page=True)
 

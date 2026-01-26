@@ -17,18 +17,18 @@ async def ainvoke_runnable(
     """
     Runnable을 비동기적으로 실행하며, 재시도 옵션을 지원합니다.
     Infrastructure 레이어: 에러 발생 시 RuntimeError를 발생시킵니다.
-    
+
     Args:
-        chain: 실행할 LangChain Runnable 객체
-        variables: 체인에 전달할 입력 변수
+        runnable: 실행할 LangChain Runnable 객체
+        variables: Runnable에 전달할 입력 변수
         step_label: 단계 레이블 (에러 메시지용)
-        config: 체인 실행 설정 (timeout 등)
-    
+        config: 실행 설정 (timeout 등)
+
     Returns:
-        체인 실행 결과
-    
+        Runnable 실행 결과
+
     Raises:
-        RuntimeError: 체인 실행 실패 시
+        RuntimeError: 실행 실패 시
     """
     last_error = None
     start = time.time()

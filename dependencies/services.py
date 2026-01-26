@@ -10,8 +10,9 @@ from services.pending_action_service import PendingActionService
 
 class Services:
     """Service 인스턴스 컨테이너"""
-    
+
     def __init__(self, repositories=None):
+        """Repository를 주입받아 ai, node, edge, pending_action 서비스 생성. repositories 생략 시 싱글톤 사용."""
         if repositories is None:
             repositories = get_repositories()
         

@@ -8,8 +8,9 @@ from repositories import node_repository
 
 class Repositories:
     """Repository 인스턴스 컨테이너"""
-    
+
     def __init__(self):
+        """ai_memory, edge, node 리포지토리 모듈 참조 저장 (함수 기반)."""
         # Repository는 함수 기반이므로 모듈 자체를 참조
         self.ai_memory = ai_memory_repository
         self.edge = edge_repository

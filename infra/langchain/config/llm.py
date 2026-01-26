@@ -1,3 +1,4 @@
+"""LLM 생성 (ChatOpenAI). LangSmith 트레이싱은 LANGCHAIN_TRACING·LANGCHAIN_API_KEY로 제어."""
 import os
 from langchain_core.callbacks import StdOutCallbackHandler
 from langchain_core.globals import set_verbose

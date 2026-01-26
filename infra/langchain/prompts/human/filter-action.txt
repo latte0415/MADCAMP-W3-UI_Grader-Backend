@@ -1,0 +1,11 @@
+다음 입력 액션들을 검토하고 처리해줘.
+
+각 액션의 정보:
+- action_type: 액션 타입 (fill, click 등)
+- action_target: 액션 타겟 설명
+- role, name: 요소 식별 정보
+- input_type: 입력 필드 타입 (text, email, password 등)
+- placeholder: placeholder 텍스트
+- selector: CSS selector
+
+처리할 수 없는 액션은 save_action으로 저장하고, 처리 가능한 액션은 적절한 입력값과 함께 filter_action으로 반환해줘.

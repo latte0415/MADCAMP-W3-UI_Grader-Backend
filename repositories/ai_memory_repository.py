@@ -55,12 +55,20 @@ def create_run_memory(run_id: UUID, content: Dict) -> Dict:
     raise Exception("run_memory 생성 실패: 데이터가 반환되지 않았습니다.")
 
 def view_run_memory(run_id: UUID) -> Optional[Dict]:
+    """
+    run_memory 조회. 없으면 빈 content로 생성 후 조회 반환.
+
+    Args:
+        run_id: 탐색 세션 ID
+
+    Returns:
+        run_memory 행 (content 등) 또는 None
+    """
     current = get_run_memory(run_id)
     if current:
         return current
-    else:
-        create_run_memory(run_id, {})
-        return get_run_memory(run_id)
+    create_run_memory(run_id, {})
+    return get_run_memory(run_id)
 
 def update_run_memory(run_id: UUID, content: Dict) -> Dict:
     """

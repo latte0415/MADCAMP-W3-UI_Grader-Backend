@@ -17,6 +17,7 @@ from utils.action_extractor import extract_actions_from_page
 
 
 def create_test_run(target_url: str, start_url: str) -> str:
+    """테스트용 run 생성. Args: target_url, start_url. Returns: run_id (UUID 문자열)."""
     supabase = get_client()
     run_data = {
         "target_url": target_url,
