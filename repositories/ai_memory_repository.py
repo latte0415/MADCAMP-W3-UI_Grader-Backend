@@ -5,6 +5,10 @@ from typing import Dict, List, Optional
 from uuid import UUID
 
 from infra.supabase import get_client
+from exceptions.repository import EntityCreationError, EntityUpdateError, DatabaseConnectionError
+from utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 # ============================================
@@ -40,19 +44,28 @@ def create_run_memory(run_id: UUID, content: Dict) -> Dict:
         생성된 run_memory 정보 딕셔너리
     
     Raises:
-        Exception: 생성 실패 시
+        EntityCreationError: 생성 실패 시
+        DatabaseConnectionError: 데이터베이스 연결 실패 시
     """
-    supabase = get_client()
-    memory_data = {
-        "run_id": str(run_id),
-        "content": content
-    }
-    
-    result = supabase.table("run_memory").insert(memory_data).execute()
-    
-    if result.data and len(result.data) > 0:
-        return result.data[0]
-    raise Exception("run_memory 생성 실패: 데이터가 반환되지 않았습니다.")
+    try:
+        supabase = get_client()
+        memory_data = {
+            "run_id": str(run_id),
+            "content": content
+        }
+        
+        result = supabase.table("run_memory").insert(memory_data).execute()
+        
+        if result.data and len(result.data) > 0:
+            return result.data[0]
+        raise EntityCreationError("run_memory", reason="데이터가 반환되지 않았습니다.")
+    except EntityCreationError:
+        raise
+    except Exception as e:
+        logger.error(f"run_memory 생성 중 예외 발생 (run_id: {run_id}): {e}", exc_info=True)
+        if "connection" in str(e).lower() or "network" in str(e).lower():
+            raise DatabaseConnectionError(original_error=e)
+        raise EntityCreationError("run_memory", original_error=e)
 
 def view_run_memory(run_id: UUID) -> Optional[Dict]:
     """
@@ -82,16 +95,25 @@ def update_run_memory(run_id: UUID, content: Dict) -> Dict:
         업데이트된 run_memory 정보 딕셔너리
     
     Raises:
-        Exception: 업데이트 실패 시
+        EntityUpdateError: 업데이트 실패 시
+        DatabaseConnectionError: 데이터베이스 연결 실패 시
     """
-    supabase = get_client()
-    result = supabase.table("run_memory").update({
-        "content": content
-    }).eq("run_id", str(run_id)).execute()
-    
-    if result.data and len(result.data) > 0:
-        return result.data[0]
-    raise Exception("run_memory 업데이트 실패: 데이터가 반환되지 않았습니다.")
+    try:
+        supabase = get_client()
+        result = supabase.table("run_memory").update({
+            "content": content
+        }).eq("run_id", str(run_id)).execute()
+        
+        if result.data and len(result.data) > 0:
+            return result.data[0]
+        raise EntityUpdateError("run_memory", entity_id=str(run_id), reason="데이터가 반환되지 않았습니다.")
+    except EntityUpdateError:
+        raise
+    except Exception as e:
+        logger.error(f"run_memory 업데이트 중 예외 발생 (run_id: {run_id}): {e}", exc_info=True)
+        if "connection" in str(e).lower() or "network" in str(e).lower():
+            raise DatabaseConnectionError(original_error=e)
+        raise EntityUpdateError("run_memory", entity_id=str(run_id), original_error=e)
 
 
 # ============================================
@@ -121,23 +143,32 @@ def create_pending_action(
         생성된 pending_action 정보 딕셔너리
     
     Raises:
-        Exception: 생성 실패 시
+        EntityCreationError: 생성 실패 시
+        DatabaseConnectionError: 데이터베이스 연결 실패 시
     """
-    supabase = get_client()
-    pending_data = {
-        "run_id": str(run_id),
-        "from_node_id": str(from_node_id),
-        "action_type": action_type,
-        "action_target": action_target,
-        "action_value": action_value or "",
-        "status": status
-    }
-    
-    result = supabase.table("pending_actions").insert(pending_data).execute()
-    
-    if result.data and len(result.data) > 0:
-        return result.data[0]
-    raise Exception("pending_action 생성 실패: 데이터가 반환되지 않았습니다.")
+    try:
+        supabase = get_client()
+        pending_data = {
+            "run_id": str(run_id),
+            "from_node_id": str(from_node_id),
+            "action_type": action_type,
+            "action_target": action_target,
+            "action_value": action_value or "",
+            "status": status
+        }
+        
+        result = supabase.table("pending_actions").insert(pending_data).execute()
+        
+        if result.data and len(result.data) > 0:
+            return result.data[0]
+        raise EntityCreationError("pending_action", reason="데이터가 반환되지 않았습니다.")
+    except EntityCreationError:
+        raise
+    except Exception as e:
+        logger.error(f"pending_action 생성 중 예외 발생 (run_id: {run_id}): {e}", exc_info=True)
+        if "connection" in str(e).lower() or "network" in str(e).lower():
+            raise DatabaseConnectionError(original_error=e)
+        raise EntityCreationError("pending_action", original_error=e)
 
 
 def delete_pending_action(pending_action_id: UUID) -> bool:

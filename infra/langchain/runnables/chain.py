@@ -128,23 +128,37 @@ async def run_chain(
         
         # variables가 없으면 입력 생성
         if variables is None:
-            # 이미지가 있는 경우 특별 처리
-            if image_base64:
-                # 등록된 포맷터가 있으면 사용 (예: update-run-memory)
-                if has_input_formatter(label):
-                    formatter = get_input_formatter(label)
-                    formatted_text = formatter(**kwargs)
-                else:
-                    # 포맷터가 없으면 기본 human_input 사용
-                    formatted_text = get_human_input(label)
+            # 등록된 포맷터가 있으면 사용 (예: update-run-memory)
+            if has_input_formatter(label):
+                formatter = get_input_formatter(label)
+                # 포맷터에 auxiliary_data 전달
+                if auxiliary_data:
+                    kwargs["auxiliary_data"] = auxiliary_data
+                formatted_text = formatter(**kwargs)
+            else:
+                # 포맷터가 없으면 기본 human_input 사용
+                formatted_text = get_human_input(label)
                 
                 # 보조 자료가 있으면 텍스트에 추가
                 if auxiliary_data:
                     auxiliary_text = "\n\n보조 정보:\n"
                     for key, value in auxiliary_data.items():
-                        auxiliary_text += f"- {key}: {value}\n"
+                        if isinstance(value, list):
+                            # 리스트는 요약해서 표시
+                            if len(value) > 10:
+                                auxiliary_text += f"- {key}: {len(value)}개 항목 (처음 10개만 표시)\n"
+                                for item in value[:10]:
+                                    auxiliary_text += f"  * {str(item)[:100]}\n"
+                            else:
+                                auxiliary_text += f"- {key}:\n"
+                                for item in value:
+                                    auxiliary_text += f"  * {str(item)[:100]}\n"
+                        else:
+                            auxiliary_text += f"- {key}: {value}\n"
                     formatted_text += auxiliary_text
-                
+            
+            # 이미지가 있는 경우 특별 처리
+            if image_base64:
                 # 이미지가 포함된 HumanMessage 생성
                 from langchain_core.messages import HumanMessage
                 
@@ -203,15 +217,10 @@ async def run_chain(
                     step_label=f"chain-{label}",
                 )
                 return result
-            # 등록된 포맷터가 있으면 사용
-            elif has_input_formatter(label):
-                formatter = get_input_formatter(label)
-                formatted_input = formatter(**kwargs)
-                variables = {"input": formatted_input}
             else:
-                # 기본: human_input 사용
-                human_input = get_human_input(label)
-                variables = {"input": human_input}
+                # 이미지가 없는 경우 (텍스트만)
+                # 프롬프트 템플릿이 {input}을 기대하므로 input으로 전달
+                variables = {"input": formatted_text}
         
         result = await ainvoke_runnable(
             runnable=chain,

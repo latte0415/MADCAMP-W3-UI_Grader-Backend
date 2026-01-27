@@ -10,7 +10,7 @@ class GuessIntentOutput(BaseModel):
     """Guess Intent Chain 출력 스키마"""
     intent_label: str = Field(
         ...,
-        description="엣지가 가리키는 액션의 의도를 나타내는 짧은 라벨 (15자 이내 권장, 예: 'login', 'submit_form', 'navigate_to_dashboard')"
+        description="엣지가 가리키는 액션의 의도를 나타내는 짧은 라벨 (15자 이내 필수, 예: 'login', 'submit_form', 'navigate_to_dashboard')"
     )
     
     @field_validator('intent_label')

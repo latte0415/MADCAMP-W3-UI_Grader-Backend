@@ -106,6 +106,49 @@ async def _make_action(action_type: str, element: ElementHandle, action_value: O
     }
 
 
+async def _is_element_interactable(element: ElementHandle) -> bool:
+    """
+    요소가 실제로 상호작용 가능한지 확인
+    
+    Returns:
+        True if element is visible, enabled, and interactable
+    """
+    try:
+        # 요소가 DOM에 존재하는지 확인
+        # is_connected 체크를 위해 evaluate 사용
+        is_connected = await element.evaluate("el => el.isConnected")
+        if not is_connected:
+            return False
+        
+        # 요소가 보이는지 확인
+        if not await element.is_visible():
+            return False
+        
+        # Playwright의 is_enabled() 메서드 사용 (가장 정확함)
+        if not await element.is_enabled():
+            return False
+        
+        # disabled 속성 확인 (추가 안전장치)
+        is_disabled = await element.get_attribute("disabled")
+        if is_disabled is not None:
+            return False
+        
+        # aria-disabled 속성 확인
+        aria_disabled = await element.get_attribute("aria-disabled")
+        if aria_disabled == "true":
+            return False
+        
+        # pointer-events가 none인지 확인
+        pointer_events = await element.evaluate("el => window.getComputedStyle(el).pointerEvents")
+        if pointer_events == "none":
+            return False
+        
+        return True
+    except Exception:
+        # 예외 발생 시 요소가 존재하지 않거나 접근 불가능한 것으로 간주
+        return False
+
+
 async def extract_actions_from_page(page: Page) -> List[Dict]:
     """
     DOM 스캔으로 가능한 액션 추출
@@ -125,11 +168,9 @@ async def extract_actions_from_page(page: Page) -> List[Dict]:
     for selector in click_selectors:
         elements = await page.query_selector_all(selector)
         for element in elements:
-            try:
-                if not await element.is_visible():
-                    continue
-            except Exception:
-                pass
+            # 요소가 상호작용 가능한지 확인
+            if not await _is_element_interactable(element):
+                continue
             actions.append(await _make_action("click", element))
 
     # Hover 후보 (메뉴/팝업 트리거로 추정되는 요소)
@@ -143,11 +184,9 @@ async def extract_actions_from_page(page: Page) -> List[Dict]:
     for selector in hover_selectors:
         elements = await page.query_selector_all(selector)
         for element in elements:
-            try:
-                if not await element.is_visible():
-                    continue
-            except Exception:
-                pass
+            # 요소가 상호작용 가능한지 확인
+            if not await _is_element_interactable(element):
+                continue
             actions.append(await _make_action("hover", element))
 
     # 입력 필드 fill
@@ -161,8 +200,13 @@ async def extract_actions_from_page(page: Page) -> List[Dict]:
     for selector in fill_selectors:
         elements = await page.query_selector_all(selector)
         for element in elements:
+            # 요소가 상호작용 가능한지 확인
+            if not await _is_element_interactable(element):
+                continue
+            # 입력 필드는 추가로 편집 가능한지 확인
             try:
-                if not await element.is_visible():
+                is_readonly = await element.get_attribute("readonly")
+                if is_readonly is not None:
                     continue
             except Exception:
                 pass

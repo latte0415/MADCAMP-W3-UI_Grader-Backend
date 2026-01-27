@@ -1,5 +1,5 @@
 from infra.langchain.config.context import set_run_id, set_from_node_id
-from typing import Dict, Optional, Any, List
+from typing import Dict, Optional, Any, List, Tuple
 from uuid import UUID
 
 from infra.langchain.runnables.chain import run_chain
@@ -11,6 +11,11 @@ from services.pending_action_service import PendingActionService
 from schemas.filter_action import FilterActionOutput
 from schemas.run_memory import UpdateRunMemoryOutput
 from schemas.guess_intent import GuessIntentOutput
+from exceptions.service import AIServiceError, ModerationError
+from exceptions.repository import EntityNotFoundError
+from utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 class AiService:
     """AI·체인 관련 서비스 (모든 기능이 chain 기반)."""
@@ -81,7 +86,7 @@ class AiService:
         Args:
             action: 액션 딕셔너리
             include_selector: selector, role, name을 키에 포함할지 여부
-            
+        
         Returns:
             액션 식별 키 튜플
         """
@@ -98,6 +103,53 @@ class AiService:
                 action.get("action_type", ""),
                 action.get("action_target", "")
             )
+
+    def _dicts_are_different(
+        self,
+        old_dict: Dict[str, Any],
+        new_dict: Dict[str, Any]
+    ) -> bool:
+        """
+        두 딕셔너리가 다른지 재귀적으로 비교합니다.
+        
+        Args:
+            old_dict: 이전 딕셔너리
+            new_dict: 새로운 딕셔너리
+        
+        Returns:
+            다르면 True, 같으면 False
+        """
+        # 키가 다르면 다름
+        if set(old_dict.keys()) != set(new_dict.keys()):
+            return True
+        
+        # 각 값 비교
+        for key in old_dict.keys():
+            old_value = old_dict[key]
+            new_value = new_dict[key]
+            
+            # 둘 다 딕셔너리면 재귀 비교
+            if isinstance(old_value, dict) and isinstance(new_value, dict):
+                if self._dicts_are_different(old_value, new_value):
+                    return True
+            # 둘 다 리스트면 비교
+            elif isinstance(old_value, list) and isinstance(new_value, list):
+                if len(old_value) != len(new_value):
+                    return True
+                for i, old_item in enumerate(old_value):
+                    if i >= len(new_value):
+                        return True
+                    new_item = new_value[i]
+                    if isinstance(old_item, dict) and isinstance(new_item, dict):
+                        if self._dicts_are_different(old_item, new_item):
+                            return True
+                    elif old_item != new_item:
+                        return True
+            # 그 외는 직접 비교
+            elif old_value != new_value:
+                return True
+        
+        return False
 
     async def get_ai_response(self) -> str:
         """chat-test chain 실행. Returns: AI 응답 문자열."""
@@ -129,40 +181,123 @@ class AiService:
 
     async def update_run_memory_with_ai(
         self,
-        image_base64: str,
-        run_id: UUID,
-        auxiliary_data: Optional[Dict[str, Any]] = None
-    ) -> str:
+        run_id: UUID = None,
+        auxiliary_data: Optional[Dict[str, Any]] = None,
+        page_state: Optional[Dict[str, Any]] = None,
+        # image_base64 파라미터는 더 이상 사용하지 않음 (하위 호환성을 위해 유지하되 무시)
+        image_base64: Optional[str] = None,
+    ) -> Tuple[Dict, bool]:
         """
-        이미지와 run_id를 포함하여 run_memory를 업데이트합니다.
+        페이지 정보를 기반으로 run_memory를 업데이트합니다.
         
         Args:
-            image_base64: base64로 인코딩된 이미지
             run_id: run_id
             auxiliary_data: 보조 자료 딕셔너리 (사용자가 인지할 수 있는 정보만)
+            page_state: 페이지 상태 정보 (이미지 대신 사용)
+            image_base64: 더 이상 사용하지 않음 (하위 호환성을 위해 유지, 무시됨)
         
         Returns:
-            업데이트된 run_memory 정보 딕셔너리 (문자열로 변환)
+            (업데이트된 run_memory 정보 딕셔너리, 수정사항 여부) 튜플
+            - 수정사항이 있으면 True, 없으면 False
         """
+        # image_base64 파라미터는 더 이상 사용하지 않음 (명시적으로 무시)
+        if image_base64 is not None:
+            logger.warning("image_base64 파라미터는 더 이상 사용하지 않습니다. 무시됩니다.")
         # 1. 현재 run_memory 조회
         run_memory_content = self._get_run_memory_content(run_id)
         
-        # 2. Chain 실행 (이미지 + run_memory)
+        # 2. 페이지 상태 정보를 auxiliary_data에 통합 (이미지 대신 사용)
+        enhanced_auxiliary_data = auxiliary_data.copy() if auxiliary_data else {}
+        
+        if page_state:
+            # 일반 사용자가 인지할 수 있는 정보만 포함
+            # 페이지 제목
+            page_title = page_state.get("page_title", "")
+            if page_title:
+                enhanced_auxiliary_data["page_title"] = page_title
+            
+            # 제목들 (h1, h2, h3)
+            headings = page_state.get("headings", [])
+            if headings:
+                enhanced_auxiliary_data["headings"] = headings[:10]
+            
+            # 문단 텍스트
+            paragraphs = page_state.get("paragraphs", [])
+            if paragraphs:
+                enhanced_auxiliary_data["paragraphs"] = paragraphs[:10]
+            
+            # 버튼 텍스트
+            buttons = page_state.get("buttons", [])
+            if buttons:
+                enhanced_auxiliary_data["buttons"] = buttons[:15]
+            
+            # 링크 텍스트
+            links = page_state.get("links", [])
+            if links:
+                enhanced_auxiliary_data["links"] = links[:15]
+            
+            # 입력 필드 라벨
+            input_labels = page_state.get("input_labels", [])
+            if input_labels:
+                enhanced_auxiliary_data["input_labels"] = input_labels[:10]
+            
+            # 주요 텍스트 콘텐츠 (요약)
+            visible_text = page_state.get("visible_text", "")
+            if visible_text:
+                enhanced_auxiliary_data["visible_text"] = visible_text[:300]  # 최대 300자
+        
+        # 3. Moderation 검사 (정책 위반 가능성 확인)
+        try:
+            from utils.moderation_checker import check_update_run_memory_prompt
+            url = enhanced_auxiliary_data.get("url")
+            is_safe, moderation_result = check_update_run_memory_prompt(
+                url=url,
+                run_memory_content=run_memory_content
+            )
+            
+            if not is_safe:
+                logger.warning(f"Moderation 검사 실패: {moderation_result}")
+                logger.warning("정책 위반 가능성으로 인해 LLM 호출을 건너뜁니다.")
+                # 정책 위반 가능성이 있으면 기존 메모리 그대로 반환
+                from repositories.ai_memory_repository import get_run_memory
+                current_memory = get_run_memory(run_id)
+                return (current_memory or {}, False)
+        except ModerationError:
+            # Moderation 검사 자체가 실패한 경우에도 계속 진행
+            logger.warning("Moderation 검사 중 에러 발생 (계속 진행)", exc_info=True)
+        except Exception as e:
+            # 예상치 못한 에러도 로그만 남기고 계속 진행
+            logger.warning(f"Moderation 검사 중 예상치 못한 에러 발생 (계속 진행): {e}", exc_info=True)
+        
+        # 4. Chain 실행 (이미지 없이 텍스트 정보만 사용)
+        # # 이미지 사용 시 (주석 처리)
+        # result = await run_chain(
+        #     label="update-run-memory",
+        #     image_base64=image_base64,
+        #     auxiliary_data=enhanced_auxiliary_data,
+        #     run_memory=run_memory_content,
+        #     use_vision=True
+        # )
+        
+        # 텍스트 정보만 사용 (일반 사용자 인지 가능한 정보)
         result = await run_chain(
             label="update-run-memory",
-            image_base64=image_base64,
-            auxiliary_data=auxiliary_data,
+            image_base64=None,  # 이미지 사용 안 함
+            auxiliary_data=enhanced_auxiliary_data,
             run_memory=run_memory_content,
-            use_vision=True
+            use_vision=False  # Vision 모델 사용 안 함
         )
         
-        # 3. Chain 결과에서 content 추출 및 run_memory 업데이트
+        # 3. Chain 결과에서 content 추출
         updated_content = self._extract_content_from_result(result, run_memory_content)
         
-        # 4. run_memory 실제 업데이트
+        # 4. 수정사항 확인 (업데이트 전후 비교)
+        has_changes = self._dicts_are_different(run_memory_content, updated_content)
+        
+        # 5. run_memory 실제 업데이트
         updated_memory = update_run_memory(run_id, updated_content)
         
-        return str(updated_memory)
+        return (updated_memory, has_changes)
 
     async def filter_input_actions_with_run_memory(
         self,
@@ -224,8 +359,8 @@ class AiService:
                         status="pending"
                     )
                 except Exception as e:
-                    # pending action 생성 실패는 로그만 남기고 계속 진행
-                    print(f"[filter_input_actions_with_run_memory] pending action 생성 실패: {e}")
+                    # pending action 생성 실패는 로그만 남기고 계속 진행 (비치명적 에러)
+                    logger.warning(f"pending action 생성 실패 (계속 진행): {e}", exc_info=True)
         
         # 6. 적절한 입력값이 있는 액션만 반환
         return processable_actions
@@ -308,8 +443,8 @@ class AiService:
                     pending_action_id = UUID(pending.get("id"))
                     delete_pending_action(pending_action_id)
                 except Exception as e:
-                    # pending action 삭제 실패는 로그만 남기고 계속 진행
-                    print(f"[process_pending_actions_with_run_memory] pending action 삭제 실패: {e}")
+                    # pending action 삭제 실패는 로그만 남기고 계속 진행 (비치명적 에러)
+                    logger.warning(f"pending action 삭제 실패 (계속 진행): {e}", exc_info=True)
         
         # 7. 처리 가능한 액션 리스트 반환
         return processable_actions
@@ -332,7 +467,7 @@ class AiService:
             # 1. 엣지 정보 조회
             edge = get_edge_by_id(edge_id)
             if not edge:
-                raise ValueError(f"엣지를 찾을 수 없습니다: {edge_id}")
+                raise EntityNotFoundError("엣지", entity_id=str(edge_id))
             
             from_node_id = edge.get("from_node_id")
             to_node_id = edge.get("to_node_id")
@@ -346,9 +481,9 @@ class AiService:
             to_node = get_node_by_id(UUID(to_node_id))
             
             if not from_node:
-                raise ValueError(f"시작 노드를 찾을 수 없습니다: {from_node_id}")
+                raise EntityNotFoundError("시작 노드", entity_id=str(from_node_id))
             if not to_node:
-                raise ValueError(f"도착 노드를 찾을 수 없습니다: {to_node_id}")
+                raise EntityNotFoundError("도착 노드", entity_id=str(to_node_id))
             
             # 3. Chain 실행 (guess-intent)
             result = await run_chain(
@@ -379,7 +514,11 @@ class AiService:
             
             return intent_label
             
+        except (EntityNotFoundError, AIServiceError) as e:
+            # 치명적 에러는 재발생하지 않고 로그만 남기고 빈 문자열 반환 (비치명적 처리)
+            logger.warning(f"intent_label 생성 실패 (비치명적): {e.message}", exc_info=True)
+            return ""
         except Exception as e:
-            # 에러 발생 시 로그만 남기고 빈 문자열 반환
-            print(f"[guess_and_update_edge_intent] intent_label 생성 실패: {e}")
+            # 예상치 못한 에러도 로그만 남기고 빈 문자열 반환
+            logger.error(f"intent_label 생성 중 예상치 못한 에러 발생: {e}", exc_info=True)
             return ""
