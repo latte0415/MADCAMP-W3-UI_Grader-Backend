@@ -170,10 +170,12 @@ def acquire_action_lock(
     action_type: str,
     action_target: str,
     action_value: str = "",
-    timeout: int = 30
+    timeout: int = 30,
+    retry_interval: float = 0.5,
+    max_retries: int = 600  # 기본값: 300초 (0.5초 * 600)
 ) -> bool:
     """
-    액션 처리 락 획득
+    액션 처리 락 획득 (재시도 포함)
     
     Args:
         run_id: 탐색 세션 ID
@@ -182,13 +184,15 @@ def acquire_action_lock(
         action_target: 액션 대상
         action_value: 액션 값
         timeout: 락 만료 시간 (초)
+        retry_interval: 재시도 간격 (초)
+        max_retries: 최대 재시도 횟수
     
     Returns:
         락 획득 성공 여부
     """
     lock_manager = get_lock_manager()
     key = f"action:{run_id}:{from_node_id}:{action_type}:{action_target}:{action_value}"
-    return lock_manager.acquire_lock(key, timeout)
+    return lock_manager.acquire_lock(key, timeout, retry_interval, max_retries)
 
 
 def release_action_lock(

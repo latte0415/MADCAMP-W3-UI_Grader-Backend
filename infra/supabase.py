@@ -4,6 +4,11 @@ from typing import Optional
 from supabase import create_client, Client
 from dotenv import load_dotenv
 
+from exceptions.repository import DatabaseConnectionError
+from utils.logger import get_logger
+
+logger = get_logger(__name__)
+
 # 환경 변수 로드
 load_dotenv()
 
@@ -23,11 +28,15 @@ def get_supabase_client() -> Client:
         ValueError: SUPABASE_URL 또는 SUPABASE_KEY가 설정되지 않은 경우
     """
     if not SUPABASE_URL:
-        raise ValueError("SUPABASE_URL 환경 변수가 설정되지 않았습니다.")
+        raise DatabaseConnectionError(reason="SUPABASE_URL 환경 변수가 설정되지 않았습니다.")
     if not SUPABASE_KEY:
-        raise ValueError("SUPABASE_KEY 환경 변수가 설정되지 않았습니다.")
+        raise DatabaseConnectionError(reason="SUPABASE_KEY 환경 변수가 설정되지 않았습니다.")
     
-    return create_client(SUPABASE_URL, SUPABASE_KEY)
+    try:
+        return create_client(SUPABASE_URL, SUPABASE_KEY)
+    except Exception as e:
+        logger.error(f"Supabase 클라이언트 생성 실패: {e}", exc_info=True)
+        raise DatabaseConnectionError(original_error=e)
 
 
 # 싱글톤 인스턴스 (선택적)

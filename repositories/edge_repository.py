@@ -1,10 +1,14 @@
 """Edge Repository
 edges 테이블 관련 데이터 접근 로직
 """
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 from uuid import UUID
 
 from infra.supabase import get_client
+from exceptions.repository import EntityCreationError, EntityUpdateError, DatabaseConnectionError
+from utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 def find_duplicate_edge(
@@ -12,7 +16,8 @@ def find_duplicate_edge(
     from_node_id: UUID,
     action_type: str,
     action_target: str,
-    action_value: str = ""
+    action_value: str = "",
+    outcome: Optional[str] = "success"  # 성공한 엣지만 체크 (기본값: "success")
 ) -> Optional[Dict]:
     """
     중복 엣지 조회
@@ -23,20 +28,58 @@ def find_duplicate_edge(
         action_type: 액션 타입
         action_target: 액션 대상
         action_value: 액션 값
+        outcome: 엣지 결과 필터 (기본값: "success" - 성공한 엣지만 체크)
+                 None이면 모든 outcome 체크
     
     Returns:
         기존 엣지 데이터 또는 None
     """
     supabase = get_client()
-    result = supabase.table("edges").select("*").eq("run_id", str(run_id)).eq(
+    query = supabase.table("edges").select("*").eq("run_id", str(run_id)).eq(
         "from_node_id", str(from_node_id)
     ).eq("action_type", action_type).eq(
         "action_target", action_target
-    ).eq("action_value", action_value).execute()
+    ).eq("action_value", action_value)
+    
+    # outcome 필터 추가 (성공한 엣지만 중복으로 체크)
+    if outcome is not None:
+        query = query.eq("outcome", outcome)
+    
+    result = query.execute()
     
     if result.data and len(result.data) > 0:
         return result.data[0]
     return None
+
+
+def count_failed_edges(
+    run_id: UUID,
+    from_node_id: UUID,
+    action_type: str,
+    action_target: str,
+    action_value: str = ""
+) -> int:
+    """
+    실패한 엣지 개수 조회 (재시도 제한용)
+    
+    Args:
+        run_id: 탐색 세션 ID
+        from_node_id: 시작 노드 ID
+        action_type: 액션 타입
+        action_target: 액션 대상
+        action_value: 액션 값
+    
+    Returns:
+        실패한 엣지 개수
+    """
+    supabase = get_client()
+    result = supabase.table("edges").select("id", count="exact").eq("run_id", str(run_id)).eq(
+        "from_node_id", str(from_node_id)
+    ).eq("action_type", action_type).eq(
+        "action_target", action_target
+    ).eq("action_value", action_value).eq("outcome", "fail").execute()
+    
+    return result.count if result.count is not None else 0
 
 
 def find_edge_by_nodes(
@@ -91,14 +134,23 @@ def create_edge(edge_data: Dict) -> Dict:
         생성된 엣지 정보 딕셔너리
     
     Raises:
-        Exception: 생성 실패 시
+        EntityCreationError: 생성 실패 시
+        DatabaseConnectionError: 데이터베이스 연결 실패 시
     """
-    supabase = get_client()
-    result = supabase.table("edges").insert(edge_data).execute()
-    
-    if result.data and len(result.data) > 0:
-        return result.data[0]
-    raise Exception("엣지 생성 실패: 데이터가 반환되지 않았습니다.")
+    try:
+        supabase = get_client()
+        result = supabase.table("edges").insert(edge_data).execute()
+        
+        if result.data and len(result.data) > 0:
+            return result.data[0]
+        raise EntityCreationError("엣지", reason="데이터가 반환되지 않았습니다.")
+    except EntityCreationError:
+        raise
+    except Exception as e:
+        logger.error(f"엣지 생성 중 예외 발생: {e}", exc_info=True)
+        if "connection" in str(e).lower() or "network" in str(e).lower():
+            raise DatabaseConnectionError(original_error=e)
+        raise EntityCreationError("엣지", original_error=e)
 
 
 def get_edge_by_id(edge_id: UUID) -> Optional[Dict]:
@@ -131,11 +183,35 @@ def update_edge_intent_label(edge_id: UUID, intent_label: str) -> Dict:
         업데이트된 엣지 정보 딕셔너리
     
     Raises:
-        Exception: 업데이트 실패 시
+        EntityUpdateError: 업데이트 실패 시
+        DatabaseConnectionError: 데이터베이스 연결 실패 시
+    """
+    try:
+        supabase = get_client()
+        result = supabase.table("edges").update({"intent_label": intent_label}).eq("id", str(edge_id)).execute()
+        
+        if result.data and len(result.data) > 0:
+            return result.data[0]
+        raise EntityUpdateError("엣지", entity_id=str(edge_id), reason="intent_label 업데이트 실패: 데이터가 반환되지 않았습니다.")
+    except EntityUpdateError:
+        raise
+    except Exception as e:
+        logger.error(f"엣지 intent_label 업데이트 중 예외 발생 (edge_id: {edge_id}): {e}", exc_info=True)
+        if "connection" in str(e).lower() or "network" in str(e).lower():
+            raise DatabaseConnectionError(original_error=e)
+        raise EntityUpdateError("엣지", entity_id=str(edge_id), original_error=e)
+
+
+def get_edges_by_run_id(run_id: UUID) -> List[Dict]:
+    """
+    run_id로 엣지 목록 조회
+    
+    Args:
+        run_id: 탐색 세션 ID
+    
+    Returns:
+        엣지 리스트
     """
     supabase = get_client()
-    result = supabase.table("edges").update({"intent_label": intent_label}).eq("id", str(edge_id)).execute()
-    
-    if result.data and len(result.data) > 0:
-        return result.data[0]
-    raise Exception("엣지 intent_label 업데이트 실패: 데이터가 반환되지 않았습니다.")
+    result = supabase.table("edges").select("*").eq("run_id", str(run_id)).order("created_at").execute()
+    return result.data or []

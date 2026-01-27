@@ -10,6 +10,10 @@ from repositories import node_repository
 from services.ai_service import AiService
 from utils.graph_classifier import classify_change, compute_next_depths
 from utils.action_extractor import parse_action_target
+from exceptions.service import ActionExecutionError
+from utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 class EdgeService:
@@ -28,7 +32,7 @@ class EdgeService:
     
     def is_duplicate_action(self, run_id: UUID, from_node_id: UUID, action: Dict) -> Optional[Dict]:
         """
-        중복 액션 여부 확인
+        중복 액션 여부 확인 (성공한 엣지만 체크)
         
         Args:
             run_id: 탐색 세션 ID
@@ -36,15 +40,17 @@ class EdgeService:
             action: 액션 딕셔너리
         
         Returns:
-            기존 엣지 데이터 또는 None
+            기존 엣지 데이터 또는 None (성공한 엣지만 반환)
         """
         action_value = action.get("action_value", "") or ""
+        # 성공한 엣지만 중복으로 체크 (실패한 액션은 재시도 허용)
         return self.edge_repo.find_duplicate_edge(
             run_id,
             from_node_id,
             action["action_type"],
             action["action_target"],
-            action_value
+            action_value,
+            outcome="success"  # 성공한 엣지만 중복으로 체크
         )
     
     async def perform_action(self, page: Page, action: Dict) -> Dict:
@@ -72,7 +78,16 @@ class EdgeService:
             if action_type == "click":
                 href = action.get("href")
                 before_url = page.url  # 클릭 전 URL 저장
-                if selector:
+                # role과 name이 있으면 우선 사용 (가장 정확함)
+                if role and name:
+                    locator = page.get_by_role(role, name=name)
+                    await locator.evaluate("el => el.scrollIntoView({block: 'center'})")
+                    try:
+                        await locator.click(force=True, timeout=5000)
+                    except Exception:
+                        # viewport 이슈 fallback: JS click
+                        await locator.evaluate("el => el.click()")
+                elif selector:
                     await page.wait_for_selector(selector, timeout=5000, state="attached")
                     locator = page.locator(selector).first
                     await locator.evaluate("el => el.scrollIntoView({block: 'center'})")
@@ -81,20 +96,20 @@ class EdgeService:
                     except Exception:
                         # viewport 이슈 fallback: JS click
                         await locator.evaluate("el => el.click()")
-                elif role and name:
-                    locator = page.get_by_role(role, name=name)
-                    await locator.evaluate("el => el.scrollIntoView({block: 'center'})")
-                    try:
-                        await locator.click(force=True, timeout=5000)
-                    except Exception:
-                        await locator.evaluate("el => el.click()")
                 else:
                     raise Exception("click: 대상 요소를 찾을 수 없습니다.")
                 # URL 변경이 없으면 href로 직접 이동 시도
                 if href and page.url == before_url:
                     await page.goto(href, wait_until="networkidle")
                 # SPA에서 URL 변화 없이 DOM만 바뀌는 케이스 대비
-                await page.wait_for_timeout(700)
+                # 네트워크 상태가 안정화될 때까지 대기 (타임아웃 명시)
+                try:
+                    await page.wait_for_load_state("networkidle", timeout=10000)  # 5초 → 10초로 증가
+                except Exception:
+                    # 타임아웃이어도 계속 진행 (일부 페이지는 networkidle에 도달하지 않을 수 있음)
+                    pass
+                # 추가 안정화 대기 시간 (최적화: 1500ms → 1000ms)
+                await page.wait_for_timeout(1000)
             elif action_type == "hover":
                 if role and name:
                     await page.get_by_role(role, name=name).hover()
@@ -163,6 +178,16 @@ class EdgeService:
                     await page.fill(selector, action_value)
                 else:
                     raise Exception("fill: 대상 요소를 찾을 수 없습니다.")
+                
+                # fill 액션 후 입력 이벤트가 처리되고 페이지가 안정화될 때까지 대기
+                # fill은 일반적으로 페이지 변경을 유발하지 않으므로 짧은 대기만 필요
+                try:
+                    await page.wait_for_load_state("domcontentloaded", timeout=3000)
+                except Exception:
+                    # 타임아웃이어도 계속 진행
+                    pass
+                # 추가 안정화 대기 시간 (입력 후 폼 검증 등이 실행될 수 있음)
+                await page.wait_for_timeout(500)  # 1000ms → 500ms로 감소
             elif action_type == "navigate":
                 await page.goto(action_value, wait_until="networkidle")
             elif action_type == "wait":
@@ -172,6 +197,7 @@ class EdgeService:
         except Exception as e:
             outcome = "fail"
             error_msg = str(e)
+            logger.warning(f"액션 실행 실패: {action_type} / {action.get('action_target', 'unknown')} - {error_msg}", exc_info=True)
         
         latency_ms = int((time.time() - start_time) * 1000)
         return {"outcome": outcome, "latency_ms": latency_ms, "error_msg": error_msg}
@@ -203,8 +229,10 @@ class EdgeService:
         Returns:
             엣지 정보 딕셔너리
         """
+        # record_edge 호출 시점에서도 중복 체크 (안전장치)
         existing = self.is_duplicate_action(run_id, from_node_id, action)
         if existing:
+            logger.debug(f"중복 액션 발견 (record_edge 시점): run_id={run_id}, from_node={from_node_id}, action={action.get('action_type')} / {action.get('action_target', '')[:50]}, existing_edge_id={existing.get('id')}")
             return existing
         
         action_value = action.get("action_value", "") or ""
@@ -222,7 +250,18 @@ class EdgeService:
             "depth_diff_type": depth_diff_type
         }
         
-        return self.edge_repo.create_edge(edge_data)
+        try:
+            edge = self.edge_repo.create_edge(edge_data)
+            logger.debug(f"엣지 생성 성공: edge_id={edge.get('id')}, run_id={run_id}, from_node={from_node_id}, to_node={to_node_id}, outcome={outcome}")
+            return edge
+        except Exception as e:
+            logger.error(f"엣지 생성 실패: run_id={run_id}, from_node={from_node_id}, action={action.get('action_type')} / {action.get('action_target', '')[:50]}, error={e}", exc_info=True)
+            # 엣지 생성 실패 시에도 중복 체크를 다시 수행 (다른 워커가 생성했을 수 있음)
+            existing_after_fail = self.is_duplicate_action(run_id, from_node_id, action)
+            if existing_after_fail:
+                logger.info(f"엣지 생성 실패 후 중복 엣지 발견: existing_edge_id={existing_after_fail.get('id')}")
+                return existing_after_fail
+            raise
     
     async def perform_and_record_edge(
         self,
@@ -245,8 +284,11 @@ class EdgeService:
         Returns:
             엣지 정보 딕셔너리
         """
+        # 워커 생성 시점과 실행 시점 사이에 다른 워커가 같은 액션을 실행했을 수 있으므로
+        # 실행 시점에서 다시 중복 체크를 수행
         existing = self.is_duplicate_action(run_id, from_node_id, action)
         if existing:
+            logger.debug(f"중복 액션 발견 (실행 시점): run_id={run_id}, from_node={from_node_id}, action={action.get('action_type')} / {action.get('action_target', '')[:50]}, existing_edge_id={existing.get('id')}")
             return existing
         
         # node_service가 주입된 경우 사용, 없으면 node_repo 직접 사용
@@ -262,6 +304,23 @@ class EdgeService:
         to_node = None
         to_node_created = False
         if action_result["outcome"] == "success":
+            # 액션 실행 후 페이지가 완전히 안정화될 때까지 대기
+            # 노드 생성 전에 페이지 상태가 완전히 반영되도록 함
+            # 타임아웃을 명시적으로 설정하여 무한 대기 방지
+            try:
+                # DOM이 로드될 때까지 대기 (최대 10초)
+                await page.wait_for_load_state("domcontentloaded", timeout=10000)
+                # 네트워크가 안정화될 때까지 대기 (최대 10초, 타임아웃 명시)
+                try:
+                    await page.wait_for_load_state("networkidle", timeout=10000)  # 5초 → 10초로 증가
+                except Exception:
+                    # networkidle에 도달하지 않아도 계속 진행 (일부 페이지는 계속 요청을 보낼 수 있음)
+                    pass
+                # 추가 안정화 대기 (페이지 변경이 완전히 반영되도록, 최적화: 0.5초 → 0.3초)
+                await asyncio.sleep(0.3)
+            except Exception as e:
+                logger.warning(f"페이지 로드 대기 중 에러 (계속 진행): {e}")
+            
             if self.node_service:
                 result = await self.node_service.create_or_get_node(run_id, page, return_created=True)
                 if isinstance(result, tuple):
@@ -281,8 +340,14 @@ class EdgeService:
             
             to_node_id = UUID(to_node["id"])
             
-            # 같은 노드로 가는 기존 엣지가 있으면 삭제 (중복 방지)
-            if to_node_id:
+            # 같은 노드로 돌아온 경우 실패로 간주
+            if to_node_id == from_node_id:
+                action_result["outcome"] = "fail"
+                action_result["error_msg"] = "액션 실행 후 같은 노드로 돌아옴"
+                to_node_id = None  # 같은 노드로 돌아온 경우 to_node_id를 None으로 설정
+                logger.warning(f"액션 실행 후 같은 노드로 돌아옴: from_node={from_node_id}, action={action.get('action_type')} / {action.get('action_target', '')[:50]}")
+            else:
+                # 다른 노드로 이동한 경우에만 기존 엣지 삭제 (중복 방지)
                 from repositories.edge_repository import find_edge_by_nodes, delete_edge
                 existing_edge = find_edge_by_nodes(run_id, from_node_id, to_node_id)
                 if existing_edge:
@@ -318,8 +383,8 @@ class EdgeService:
                 ai_service = AiService()
                 asyncio.create_task(ai_service.guess_and_update_edge_intent(edge_id))
             except Exception as e:
-                # 비동기 작업 생성 실패는 로그만 남기고 계속 진행
-                print(f"[perform_and_record_edge] intent_label 생성 작업 시작 실패: {e}")
+                # 비동기 작업 생성 실패는 로그만 남기고 계속 진행 (비치명적 에러)
+                logger.warning(f"intent_label 생성 작업 시작 실패 (계속 진행): {e}", exc_info=True)
         
         return edge
 

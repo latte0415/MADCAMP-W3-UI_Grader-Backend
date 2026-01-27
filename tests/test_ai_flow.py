@@ -1023,8 +1023,8 @@ async def test_guess_edge_intent():
 
 if __name__ == "__main__":
     # asyncio.run(test_ai_flow())
-    # asyncio.run(test_ai_flow(True))
+    asyncio.run(test_ai_flow(True))
     # asyncio.run(test_interactive_action_selection(True))
     # asyncio.run(test_process_pending_actions())
-    asyncio.run(test_guess_edge_intent())
+    # asyncio.run(test_guess_edge_intent())
 

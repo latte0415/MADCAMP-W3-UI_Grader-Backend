@@ -1,18 +1,14 @@
 """그래프 구축 서비스"""
 import asyncio
 import sys
-from datetime import datetime
 from pathlib import Path
 from typing import Optional
 from uuid import UUID
 from playwright.async_api import async_playwright
 
+from utils.logger import get_logger, set_context, clear_context
 
-def _log(run_id: UUID, message: str, level: str = "INFO"):
-    """구조화된 로그 출력"""
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    run_id_short = str(run_id)[:8]
-    print(f"[{timestamp}] [{level}] [GRAPH_BUILDER] [run:{run_id_short}] {message}")
+logger = get_logger(__name__)
 
 # 프로젝트 루트를 Python 경로에 추가
 project_root = Path(__file__).parent.parent
@@ -35,10 +31,11 @@ async def start_graph_building(run_id: UUID, start_url: str) -> None:
     browser = None
     
     try:
-        _log(run_id, f"그래프 구축 시작: start_url={start_url}")
+        set_context(run_id=str(run_id), worker_type="GRAPH_BUILDER")
+        logger.info(f"그래프 구축 시작: start_url={start_url}")
         
         # 1. Playwright로 start_url 접속
-        _log(run_id, f"[1/3] 브라우저 시작 및 페이지 로드 중: {start_url}")
+        logger.info(f"[1/3] 브라우저 시작 및 페이지 로드 중: {start_url}")
         playwright = await async_playwright().start()
         browser = await playwright.chromium.launch(headless=True)
         context = await browser.new_context(
@@ -47,27 +44,29 @@ async def start_graph_building(run_id: UUID, start_url: str) -> None:
         )
         page = await context.new_page()
         await page.goto(start_url, wait_until="networkidle")
-        _log(run_id, f"[1/3] 페이지 로드 완료")
+        logger.info(f"[1/3] 페이지 로드 완료")
         
         # 2. 첫 노드 생성
-        _log(run_id, f"[2/3] 첫 노드 생성 중...")
+        logger.info(f"[2/3] 첫 노드 생성 중...")
         node_service = NodeService()
         first_node = await node_service.create_or_get_node(run_id, page)
         first_node_id = UUID(first_node["id"])
         first_node_url = first_node.get("url", "unknown")
-        _log(run_id, f"[2/3] 첫 노드 생성 완료: node_id={first_node_id}, url={first_node_url}")
+        logger.info(f"[2/3] 첫 노드 생성 완료: node_id={first_node_id}, url={first_node_url}")
         
         # 3. 첫 워커 생성: process_node_worker에 run_id, node_id 전달
-        _log(run_id, f"[3/3] 첫 워커 생성 중: node_id={first_node_id}")
-        process_node_worker.send(str(run_id), str(first_node_id))
-        _log(run_id, f"[3/3] 첫 워커 생성 완료 - 그래프 구축 프로세스 시작됨")
+        logger.info(f"[3/3] 첫 워커 생성 중: node_id={first_node_id}")
+        message = process_node_worker.send(str(run_id), str(first_node_id))
+        message_id = message.message_id if hasattr(message, 'message_id') else 'unknown'
+        logger.info(f"[3/3] 워커 메시지 전송 완료: message_id={message_id}")
+        logger.info(f"[3/3] ⚠️  워커 프로세스가 실행 중인지 확인하세요: python -m workers.worker")
+        logger.info(f"[3/3] 첫 워커 생성 완료 - 그래프 구축 프로세스 시작됨")
         
     except Exception as e:
-        _log(run_id, f"에러 발생: {e}", "ERROR")
-        import traceback
-        traceback.print_exc()
+        logger.error(f"에러 발생: {e}", exc_info=True)
         raise
     finally:
+        clear_context()
         if browser:
             await browser.close()
         if playwright:

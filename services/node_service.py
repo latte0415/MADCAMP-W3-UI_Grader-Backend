@@ -15,6 +15,9 @@ from utils.hash_generator import (
     generate_input_state_hash
 )
 from utils.state_collector import collect_page_state
+from utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 STORAGE_BUCKET = "ui-artifacts"
 
@@ -209,6 +212,14 @@ class NodeService:
                 "application/json"
             )
             
+            # 입력값 상태 (복원용)
+            if input_values:
+                self._upload_artifact(
+                    f"{base_path}/input_state.json",
+                    json.dumps(input_values, ensure_ascii=False).encode("utf-8"),
+                    "application/json"
+                )
+            
             # refs 업데이트 (Repository 사용)
             updated_node = self.node_repo.update_node(node_id, {
                 "dom_snapshot_ref": dom_ref,
@@ -222,7 +233,9 @@ class NodeService:
             
         except Exception as e:
             error_msg = str(e)
-            raise Exception(f"노드 삽입 실패: {error_msg}")
+            from exceptions.repository import EntityCreationError
+            logger.error(f"노드 삽입 실패: {error_msg}", exc_info=True)
+            raise EntityCreationError("노드", reason=error_msg, original_error=e)
     
     def update_node_depths(self, node_id: UUID, depths: Dict[str, int]) -> Dict:
         """
@@ -276,8 +289,18 @@ class NodeService:
             "css_snapshot": None,
             "a11y_snapshot": None,
             "screenshot_bytes": None,
-            "storage_state": None
+            "storage_state": None,
+            "input_values": None
         }
+        
+        # 입력값 상태 (복원용, dom_snapshot과 같은 base_path)
+        if node.get("dom_snapshot_ref"):
+            input_state_ref = node["dom_snapshot_ref"].replace("dom_snapshot.html", "input_state.json")
+            try:
+                input_bytes = download_storage_file(input_state_ref)
+                artifacts["input_values"] = json.loads(input_bytes.decode("utf-8"))
+            except Exception:
+                pass
         
         # DOM 스냅샷 (HTML)
         if node.get("dom_snapshot_ref"):
