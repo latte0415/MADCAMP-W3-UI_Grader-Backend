@@ -1,0 +1,20 @@
+{
+  "run_id": "94946ed4-f3ba-4fcb-898d-62d15116f3e0",
+  "timestamp": "2026-01-27T17:30:55.576056",
+  "total_score": 100.0,
+  "category_scores": {
+    "learnability": 100.0,
+    "efficiency": 100.0,
+    "control": 100.0
+  },
+  "summary": {
+    "node_count": 0,
+    "edge_count": 0,
+    "path_count": 0
+  },
+  "details": {
+    "static_analysis": [],
+    "transition_analysis": [],
+    "workflow_analysis": []
+  }
+}
