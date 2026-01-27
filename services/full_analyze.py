@@ -22,6 +22,7 @@ from evaluators.at_first_glance.at_first_glance import check_accessibility
 from evaluators.after_actions.after_actions import evaluate_after_action
 from evaluators.doing_actions.doing_actions import evaluate_doing_actions
 from utils.logger import get_logger
+from playwright.sync_api import sync_playwright
 
 logger = get_logger(__name__)
 
@@ -43,27 +44,34 @@ def run_full_analysis(run_id: UUID):
     print("\n[2] Pre-processing Nodes (Element Extraction)...")
     node_cache = {} # node_id -> enriched_node_data
     
-    for node in nodes_raw:
-        node_id = str(node['id'])
-        analyzer = NodeAnalyzer(node_id)
-        if analyzer.load_data():
-            dom = analyzer.get_dom()
-            css = analyzer.get_css()
-            
-            node_data = analyzer.node_data.copy()
-            if dom:
-                extractor = ElementExtractor(dom, css)
-                extraction_result = extractor.extract()
-                node_data["elements"] = extraction_result.get("elements", [])
-                node_data["status_components"] = extraction_result.get("status_components", {})
-            else:
-                node_data["elements"] = []
-                node_data["status_components"] = {}
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page()
+        
+        for node in nodes_raw:
+            node_id = str(node['id'])
+            analyzer = NodeAnalyzer(node_id)
+            if analyzer.load_data():
+                dom = analyzer.get_dom()
+                css = analyzer.get_css()
                 
-            node_cache[node_id] = node_data
-            print(f"  - Node {node_id[:8]} processed ({len(node_data['elements'])} elements)")
-        else:
-            logger.warning(f"Failed to load data for node {node_id}")
+                node_data = analyzer.node_data.copy()
+                if dom:
+                    extractor = ElementExtractor(dom, css)
+                    # Pass the shared page for optimization
+                    extraction_result = extractor.extract(page=page)
+                    node_data["elements"] = extraction_result.get("elements", [])
+                    node_data["status_components"] = extraction_result.get("status_components", {})
+                else:
+                    node_data["elements"] = []
+                    node_data["status_components"] = {}
+                    
+                node_cache[node_id] = node_data
+                print(f"  - Node {node_id[:8]} processed ({len(node_data['elements'])} elements)")
+            else:
+                logger.warning(f"Failed to load data for node {node_id}")
+        
+        browser.close()
 
     # 3. 정적 분석 (At First Glance)
     print("\n[3] Running Static Analysis (Accessibility & Clarity)...")

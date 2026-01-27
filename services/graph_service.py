@@ -34,9 +34,14 @@ class GraphService:
         """
         특정 run_id에 대한 전체 그래프 데이터 반환
         """
-        # 1. 데이터 조회
+        # 1. 데이터 조회 (생성 시간 순으로 정렬)
         nodes = self.node_repo.get_nodes_by_run_id(run_id)
         edges = self.edge_repo.get_edges_by_run_id(run_id)
+        # 생성 시간 순으로 명시적으로 정렬 (이미 repository에서 정렬하지만 안전을 위해 한 번 더)
+        nodes = sorted(nodes, key=lambda x: x.get('created_at', ''))
+
+        # for node in nodes:
+        #     print(node['id'])
         
         # 2. 노드 ID -> 인덱스 맵핑 (행렬 생성을 위해)
         node_id_to_idx = {str(node['id']): i for i, node in enumerate(nodes)}
@@ -66,8 +71,11 @@ class GraphService:
 
     def find_all_paths(self, run_id: UUID) -> List[Dict[str, Any]]:
         """
-        시작 노드에서 리프 노드까지의 모든 경로(노드 리스트 & 엣지 리스트)를 찾습니다.
+        가장 먼저 생성된 루트 노드에서 시작하여 도달 가능한 모든 가능한 경로를 BFS로 탐색합니다.
+        리프 노드에 도달하거나, 사이클이 발생하는 지점까지의 모든 시나리오를 추출합니다.
         """
+        from collections import deque
+        
         graph_data = self.get_run_graph(run_id)
         nodes = graph_data["nodes"]
         matrix = graph_data["matrix"]
@@ -76,45 +84,58 @@ class GraphService:
         if num_nodes == 0:
             return []
 
-        # 1. 시작 노드 찾기
-        start_indices = [i for i, n in enumerate(nodes) if n.get('interaction_depth') == 0]
-        if not start_indices:
-            start_indices = [0]
+        # 1. 루트 노드 식별 (생성 시간 기준 가장 빠른 노드 - 이미 정렬됨)
+        root_idx = 0
+            
+        print(f"[Graph] Root Node identified: {nodes[root_idx].get('id')} at index {root_idx}")
 
         # 2. 리프 노드(Terminal Nodes) 식별
-        # 행렬의 해당 행이 비어있으면(모든 열의 리스트가 빈 리스트면) 나가는 엣지가 없음
         leaf_indices = [i for i in range(num_nodes) if all(len(matrix[i][j]) == 0 for j in range(num_nodes))]
         
         all_paths = []
+        
+        # 3. BFS 탐색을 위한 큐 초기화
+        # queue item: (current_node_index, path_nodes_already_visited, path_edges_list)
+        queue = deque([(root_idx, [], [])])
 
-        def dfs(current_idx: int, path_nodes: List[Dict], path_edges: List[Dict], visited_node_idxs: set):
-            # 사이클 방지 (노드 인덱스 기준)
-            if current_idx in visited_node_idxs:
-                return
+        while queue:
+            curr_idx, curr_path_nodes, curr_path_edges = queue.popleft()
+            curr_node = nodes[curr_idx]
             
-            # 현재 노드 추가
-            new_path_nodes = path_nodes + [nodes[current_idx]]
-            
-            # 리프 노드에 도달했으면 경로 저장
-            if current_idx in leaf_indices:
-                all_paths.append({
-                    "nodes": new_path_nodes,
-                    "edges": path_edges
-                })
-                return
-            
-            # 방문 표시
-            new_visited = visited_node_idxs | {current_idx}
+            # 경로 업데이트
+            new_path_nodes = curr_path_nodes + [curr_node]
             
             # 다음 노드들 탐색
+            neighbors_found = False
             for next_idx in range(num_nodes):
-                edges_list = matrix[current_idx][next_idx]
+                edges_list = matrix[curr_idx][next_idx]
                 for edge in edges_list:
-                    # 각 엣지별로 별도의 경로 생성 가능 (만약 동일 노드간 여러 액션이 있다면)
-                    dfs(next_idx, new_path_nodes, path_edges + [edge], new_visited)
+                    neighbors_found = True
+                    # 사이클 감지: 다음 노드가 이미 현재 경로에 존재하면 중단하고 해당 지점까지의 경로를 저장
+                    if any(str(n['id']) == str(nodes[next_idx]['id']) for n in new_path_nodes):
+                        all_paths.append({
+                            "nodes": new_path_nodes + [nodes[next_idx]],
+                            "edges": curr_path_edges + [edge],
+                            "is_cycle": True
+                        })
+                    else:
+                        # 각 엣지별로 새로운 경로 탐색을 큐에 추가
+                        queue.append((next_idx, new_path_nodes, curr_path_edges + [edge]))
 
-        for start_idx in start_indices:
-            dfs(start_idx, [], [], set())
+            # 리프 노드(더 이상 나가는 엣지가 없는 경우) 도달 시 결과 저장
+            if not neighbors_found:
+                all_paths.append({
+                    "nodes": new_path_nodes,
+                    "edges": curr_path_edges,
+                    "is_cycle": False
+                })
+
+        print(f"[Graph] Total {len(all_paths)} paths detected (including cycles).")
+        for i, path_data in enumerate(all_paths, 1):
+            nodes = path_data["nodes"]
+            suffix = " (Cycle)" if path_data.get("is_cycle") else ""
+            display_str = " -> ".join([str(node['id'])[:8] for node in nodes])
+            print(f"  Route {i}: {display_str}{suffix}")
 
         return all_paths
 
@@ -165,10 +186,7 @@ if __name__ == "__main__":
                 
                 print(f"  Path {i}:")
                 # 노드와 엣지를 번갈아가며 출력
-                display_str = str(nodes[0]['id'])[:8]
-                for j in range(len(edges)):
-                    edge_label = edges[j].get('intent_label') or edges[j].get('action_type')
-                    display_str += f" --({edge_label})--> {str(nodes[j+1]['id'])[:8]}"
+                display_str = " -> ".join([str(node['id'])[:8] for node in nodes])
                 print(f"    {display_str}")
                 
         except Exception as e:
