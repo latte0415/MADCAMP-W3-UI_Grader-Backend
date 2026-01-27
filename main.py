@@ -2,7 +2,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from routers import monitor, evaluation
+from routers import monitor, evaluation, runs
 from middleware.exception_handler import register_exception_handlers
 from utils.logger import setup_logging
 
@@ -26,6 +26,7 @@ register_exception_handlers(app)
 # 라우터 등록
 app.include_router(monitor.router)
 app.include_router(evaluation.router)
+app.include_router(runs.router)
 
 
 @app.get("/")
