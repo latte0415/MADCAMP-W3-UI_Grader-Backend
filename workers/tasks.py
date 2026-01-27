@@ -123,14 +123,43 @@ async def _restore_input_values_on_page(page, input_values: Dict[str, str], run_
     """
     노드 저장 입력값을 페이지에 복원합니다.
     role= name= 형식 또는 selector 키를 사용합니다.
-    <hashed:...> 값(비밀번호 등)은 스킵합니다.
+    <hashed:...> 값(비밀번호 등)은 run_memory의 역해시 딕셔너리에서 원본 값을 가져와서 복원합니다.
     """
     if not input_values:
         return
+    
+    # run_memory에서 비밀번호 역해시 딕셔너리 가져오기
+    password_hash_map = {}
+    try:
+        from repositories.ai_memory_repository import get_run_memory
+        run_memory = get_run_memory(run_id)
+        if run_memory:
+            content = run_memory.get("content", {})
+            password_hash_map = content.get("password_hash_map", {})
+    except Exception as e:
+        logger.debug(f"run_memory에서 비밀번호 역해시 딕셔너리 조회 실패 (계속 진행): {e}")
+    
     restored = 0
+    password_restored = 0
     for key, value in input_values.items():
-        if not value or (isinstance(value, str) and value.startswith("<hashed:")):
+        if not value:
             continue
+        
+        # 비밀번호 필드인 경우 (<hashed:...> 형식) 역해시 딕셔너리에서 원본 값 가져오기
+        if isinstance(value, str) and value.startswith("<hashed:"):
+            # 해시 값 추출: <hashed:abc123...> -> abc123...
+            hash_value = value[8:-1]  # "<hashed:" (8자) 제거하고 ">" (1자) 제거
+            
+            # 역해시 딕셔너리에서 원본 값 찾기
+            password_value = password_hash_map.get(hash_value)
+            if password_value:
+                value = password_value
+                password_restored += 1
+            else:
+                # 역해시 딕셔너리에 없으면 스킵
+                logger.debug(f"비밀번호 필드 복원 스킵 (역해시 딕셔너리에 없음): {key[:50]}... (hash={hash_value[:8]}...)")
+                continue
+        
         try:
             role, name = parse_action_target(key)
             if role and name:
@@ -141,8 +170,12 @@ async def _restore_input_values_on_page(page, input_values: Dict[str, str], run_
             restored += 1
         except Exception as e:
             logger.debug(f"입력값 복원 스킵 key={key[:50]}: {e}")
+    
     if restored:
-        _log(worker_type, run_id, f"노드 입력값 복원: {restored}개")
+        log_msg = f"노드 입력값 복원: {restored}개"
+        if password_restored > 0:
+            log_msg += f" (비밀번호 {password_restored}개 포함)"
+        _log(worker_type, run_id, log_msg)
 
 
 async def _extract_and_filter_actions(

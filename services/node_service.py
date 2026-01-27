@@ -304,27 +304,42 @@ class NodeService:
         
         # DOM 스냅샷 (HTML)
         if node.get("dom_snapshot_ref"):
-            dom_bytes = download_storage_file(node["dom_snapshot_ref"])
-            artifacts["dom_snapshot_html"] = dom_bytes.decode("utf-8", errors="replace")
+            try:
+                dom_bytes = download_storage_file(node["dom_snapshot_ref"])
+                artifacts["dom_snapshot_html"] = dom_bytes.decode("utf-8", errors="replace")
+            except Exception:
+                pass
         
         # CSS 스냅샷 (CSS)
         if node.get("css_snapshot_ref"):
-            css_bytes = download_storage_file(node["css_snapshot_ref"])
-            artifacts["css_snapshot"] = css_bytes.decode("utf-8", errors="replace")
+            try:
+                css_bytes = download_storage_file(node["css_snapshot_ref"])
+                artifacts["css_snapshot"] = css_bytes.decode("utf-8", errors="replace")
+            except Exception:
+                pass
         
         # 접근성 스냅샷 (JSON)
         if node.get("a11y_snapshot_ref"):
-            a11y_bytes = download_storage_file(node["a11y_snapshot_ref"])
-            artifacts["a11y_snapshot"] = json.loads(a11y_bytes.decode("utf-8"))
+            try:
+                a11y_bytes = download_storage_file(node["a11y_snapshot_ref"])
+                artifacts["a11y_snapshot"] = json.loads(a11y_bytes.decode("utf-8"))
+            except Exception:
+                pass
         
         # 스크린샷 (PNG bytes)
         if node.get("screenshot_ref"):
-            artifacts["screenshot_bytes"] = download_storage_file(node["screenshot_ref"])
+            try:
+                artifacts["screenshot_bytes"] = download_storage_file(node["screenshot_ref"])
+            except Exception:
+                pass
         
         # storageState 원본 (JSON)
         if node.get("storage_ref"):
-            storage_bytes = download_storage_file(node["storage_ref"])
-            artifacts["storage_state"] = json.loads(storage_bytes.decode("utf-8"))
+            try:
+                storage_bytes = download_storage_file(node["storage_ref"])
+                artifacts["storage_state"] = json.loads(storage_bytes.decode("utf-8"))
+            except Exception:
+                pass
         
         node["artifacts"] = artifacts
         return node

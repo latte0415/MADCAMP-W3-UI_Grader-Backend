@@ -124,9 +124,18 @@ async def _is_element_interactable(element: ElementHandle) -> bool:
         if not await element.is_visible():
             return False
         
-        # 요소가 활성화되어 있는지 확인
+        # Playwright의 is_enabled() 메서드 사용 (가장 정확함)
+        if not await element.is_enabled():
+            return False
+        
+        # disabled 속성 확인 (추가 안전장치)
         is_disabled = await element.get_attribute("disabled")
         if is_disabled is not None:
+            return False
+        
+        # aria-disabled 속성 확인
+        aria_disabled = await element.get_attribute("aria-disabled")
+        if aria_disabled == "true":
             return False
         
         # pointer-events가 none인지 확인
