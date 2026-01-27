@@ -9,7 +9,19 @@ def evaluate_doing_actions(chain_data: List[Dict[str, Any]]) -> Dict[str, Any]:
     
     results = {
         "learnability": {"score": 100.0, "passed": [], "failed": []},
-        "efficiency": {"score": 0, "passed": [], "failed": []},
+        "efficiency": {
+            "score": 0, 
+            "passed": [], 
+            "failed": [],
+            "interaction_efficiency": {
+                "klm_breakdown": [],
+                "total_estimated_time_s": 0.0
+            },
+            "target_size_spacing": {
+                "size_issues": [],
+                "fitts_issues": []
+            }
+        },
         "control": {"score": 100.0, "passed": [], "failed": []}
     }
 
