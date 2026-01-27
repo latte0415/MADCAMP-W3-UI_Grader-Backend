@@ -10,6 +10,7 @@ from repositories import node_repository
 from services.ai_service import AiService
 from utils.graph_classifier import classify_change, compute_next_depths
 from utils.action_extractor import parse_action_target
+from infra.supabase import get_client
 from exceptions.service import ActionExecutionError
 from utils.logger import get_logger
 
@@ -525,6 +526,20 @@ def _get_edge_service() -> EdgeService:
         _edge_service_instance = EdgeService()
     return _edge_service_instance
 
+
+def get_edge_by_id(edge_id: str) -> Optional[Dict]:
+    """
+    ID로 엣지(액션) 조회
+    """
+    supabase = get_client()
+    try:
+        result = supabase.table("edges").select("*").eq("id", edge_id).execute()
+        if result.data and len(result.data) > 0:
+            return result.data[0]
+        return None
+    except Exception as e:
+        print(f"Error fetching edge {edge_id}: {e}")
+        return None
 
 def is_duplicate_action(run_id: UUID, from_node_id: UUID, action: Dict) -> Optional[Dict]:
     """하위 호환성을 위한 함수 래퍼"""

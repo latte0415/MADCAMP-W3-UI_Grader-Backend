@@ -1,5 +1,12 @@
 """노드+아티팩트 조회 테스트 스크립트"""
 import sys
+import os
+
+# 상위 디렉토리(프로젝트 루트)를 sys.path에 추가
+current_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.dirname(current_dir)
+sys.path.append(project_root)
+
 from uuid import UUID
 
 from services.node_service import get_node_with_artifacts
