@@ -13,13 +13,14 @@ def evaluate_after_action(edge_data: Dict[str, Any], prev_node_data: Dict[str, A
         Control 및 Efficiency 평가 결과가 포함된 딕셔너리.
     """
     results = {
-        "control": {
-            "visibility_of_status": {"status": "Unknown", "description": ""},
-            "immediate_feedback": {"status": "Unknown", "description": ""}
-        },
+        "learnability": {"score": 100.0, "passed": [], "failed": []},
         "efficiency": {
-            "latency": {"status": "Unknown", "duration_ms": 0, "description": ""}
-        }
+            "score": 0, 
+            "passed": [], 
+            "failed": [],
+            "latency": {"duration_ms": 0, "status": "Unknown", "description": ""}
+        },
+        "control": {"score": 0, "passed": [], "failed": []}
     }
 
     # 1. 효율성(Efficiency): 시스템 지연 시간 및 반응성
@@ -154,65 +155,44 @@ def evaluate_after_action(edge_data: Dict[str, Any], prev_node_data: Dict[str, A
     # 내 행동이 처리되었는지 즉시 알 수 있는가?
     # 로딩, 처리 중, 완료, 실패가 명확히 구분되는가?
     
-    outcome = edge_data.get('outcome', 'unknown')
-    error_msg = edge_data.get('error_msg')
-    
-    action_feedback = {
-        "status": "Unknown", 
-        "description": ""
-    }
-    
-    status_distinction = {
-        "status": "Unknown",
-        "description": ""
-    }
 
-    # (1) 즉각적 피드백 확인
-    if outcome == "success":
-        action_feedback["status"] = "Pass"
-        action_feedback["description"] = "행동이 성공적으로 처리되었습니다. "
-        pass 
-    elif outcome == "fail":
-        action_feedback["status"] = "Fail"
-        action_feedback["description"] = f"행동 처리에 실패했습니다. (Error: {error_msg})"
-    else:
-        action_feedback["description"] = "행동 처리 결과를 확인할 수 없습니다."
 
-    # (2) 상태 구분 (로딩/처리중/완료/실패)
-    # 느린 경우 '처리 중' 피드백이 중요
+    # (2) 상태 구분 및 가시성
     if latency >= 1000:
         if found_relevant_indicator:
-            status_distinction["description"] = "작업 시간이 길었지만, 적절한 진행 표시(로딩 등)가 제공되어 '처리 중' 상태임을 알 수 있습니다."
-            status_distinction["status"] = "Pass"
-        elif prev_node_data.get("status_components", {}).get("progress_indicators"):
-             status_distinction["description"] = "작업 시간이 길었으며, 진행 표시기가 존재하지만 클릭한 요소와의 직접적인 연관성을 찾기 어렵습니다."
-             status_distinction["status"] = "Info"
+            results["control"]["passed"].append({
+                "check": "Visibility of Status",
+                "message": "작업 시간이 길었지만, 적절한 진행 표시(로딩 등)가 제공되었습니다."
+            })
         else:
-            status_distinction["description"] = "작업 시간이 길었음에도 '처리 중'임을 나타내는 명확한 지표(로딩 등)를 찾기 어렵습니다."
-            status_distinction["status"] = "Weak"
-            
+            results["control"]["failed"].append({
+                "check": "Visibility of Status",
+                "message": "작업 시간이 길었음에도 '처리 중'임을 나타내는 명확한 지표(로딩 등)를 찾기 어렵습니다."
+            })
     else:
-        # 빠르면 즉시 '완료'로 넘어가므로 처리중 표시가 덜 중요
-        status_distinction["description"] = "작업이 신속히 처리되어 '완료' 상태로 즉각 전환되었습니다."
-        status_distinction["status"] = "Pass"
+        results["control"]["passed"].append({
+            "check": "Visibility of Status",
+            "message": "작업이 신속히 처리되어 즉각적으로 상태가 전환되었습니다."
+        })
 
-    if outcome == "fail":
-         status_distinction["description"] += " '실패' 상태가 명확한지 확인이 필요합니다 (에러 메시지 등)." 
-         
-         # 에러 메시지가 DOM에 있는지 확인
-         next_dom = next_node_data.get('artifacts', {}).get('dom_snapshot_html', '') or ""
-         # 간단한 키워드 검색 (실제로는 더 정교한 selector나 text extraction이 좋을 수 있음)
-         error_keywords = ["error", "fail", "failed", "invalid", "오류", "실패", "잘못된"]
-         found_keywords = [k for k in error_keywords if k in next_dom.lower()]
-         
-         if found_keywords:
-             status_distinction["description"] += f" (DOM에서 에러 관련 키워드 발견: {', '.join(found_keywords)})"
-             status_distinction["status"] = "Pass"
-         else:
-             status_distinction["description"] += " (DOM에서 명시적인 에러 키워드를 찾을 수 없습니다)"
-             status_distinction["status"] = "Weak"
+    # (3) 효율성 (지연 시간)
+    if latency < 1000:
+        results["efficiency"]["passed"].append({
+            "check": "System Latency",
+            "message": f"지연 시간({latency}ms)이 1초 미만으로 양호합니다."
+        })
+    else:
+        results["efficiency"]["failed"].append({
+            "check": "System Latency",
+            "message": f"지연 시간({latency}ms)이 1초 이상으로 느립니다."
+        })
 
-    results["control"]["immediate_feedback"] = action_feedback
-    results["control"]["visibility_of_status"] = status_distinction
+    # 점수 계산
+    def calculate_score(cat):
+        total = len(cat["passed"]) + len(cat["failed"])
+        return round((len(cat["passed"]) / total * 100), 1) if total > 0 else 100.0
+
+    results["efficiency"]["score"] = calculate_score(results["efficiency"])
+    results["control"]["score"] = calculate_score(results["control"])
 
     return results

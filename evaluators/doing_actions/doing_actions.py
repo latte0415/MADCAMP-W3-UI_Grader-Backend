@@ -8,19 +8,9 @@ def evaluate_doing_actions(chain_data: List[Dict[str, Any]]) -> Dict[str, Any]:
     print(f"\n[{__file__}] {len(chain_data)} 단계에 대한 효율성 평가 중...")
     
     results = {
-        "efficiency": {
-            "interaction_efficiency": {
-                "total_estimated_time_s": 0.0,
-                "klm_breakdown": [],
-                "step_count": len(chain_data),
-                "comments": []
-            },
-            "target_size_spacing": {
-                "fitts_issues": [],
-                "size_issues": [],
-                "comments": []
-            }
-        }
+        "learnability": {"score": 100.0, "passed": [], "failed": []},
+        "efficiency": {"score": 0, "passed": [], "failed": []},
+        "control": {"score": 100.0, "passed": [], "failed": []}
     }
 
     # KLM 연산자 (초 단위 근사값)
@@ -141,7 +131,26 @@ def evaluate_doing_actions(chain_data: List[Dict[str, Any]]) -> Dict[str, Any]:
 
     results["efficiency"]["interaction_efficiency"]["total_estimated_time_s"] = round(total_klm_time, 2)
 
-    
+    # KLM 총합 평가
+    total_klm_time = round(total_klm_time, 2)
+    if total_klm_time < 10.0:
+        results["efficiency"]["passed"].append({
+            "check": "Workflow Efficiency",
+            "message": f"전체 예상 작업 시간({total_klm_time}초)이 짧고 효율적입니다."
+        })
+    else:
+        results["efficiency"]["failed"].append({
+            "check": "Workflow Efficiency",
+            "message": f"전체 예상 작업 시간({total_klm_time}초)이 다소 길어 효율성이 떨어질 수 있습니다."
+        })
+
+    # 점수 계산
+    def calculate_score(cat):
+        total = len(cat["passed"]) + len(cat["failed"])
+        return round((len(cat["passed"]) / total * 100), 1) if total > 0 else 100.0
+
+    results["efficiency"]["score"] = calculate_score(results["efficiency"])
+
     print_efficiency_report(results)
     return results
 
@@ -169,32 +178,17 @@ def find_element(target: str, elements: List[Dict]) -> Optional[Dict]:
 
 def print_efficiency_report(results: Dict):
     eff = results["efficiency"]
-    ie = eff["interaction_efficiency"]
-    tss = eff["target_size_spacing"]
     
     print("\n" + "="*40)
     print("      [효율성 분석 보고서]      ")
     print("="*40)
+    print(f" Efficiency Score: {eff['score']}/100")
     
-    print(f"\n1. 상호작용 효율성 (KLM 모델)")
-    print(f"   - 총 단계: {ie['step_count']}")
-    print(f"   - 예상 작업 시간: {ie['total_estimated_time_s']}초")
-    if ie['step_count'] > 5 and ie['total_estimated_time_s'] > 15:
-        print("   - [팁] 워크플로우가 긴 것 같습니다. 단계를 줄이는 것을 고려하세요.")
-    
-    print(f"\n2. 목표 크기 및 간격 (Fitts의 법칙)")
-    if not tss["size_issues"] and not tss["fitts_issues"]:
-        print("   - 중대한 크기 또는 간격 문제가 감지되지 않았습니다. (좋음)")
-    
-    if tss["size_issues"]:
-        print(f"   - [!] {len(tss['size_issues'])}개의 작은 목표 발견:")
-        for issue in tss["size_issues"]:
-            print(f"     * 단계 {issue['step']+1}: '{issue['target']}' 크기: {issue['size']} (권장: >32px)")
-            
-    if tss["fitts_issues"]:
-        print(f"   - [!] {len(tss['fitts_issues'])}개의 높은 난이도 동작 발견 (ID > 3.0):")
-        for issue in tss["fitts_issues"]:
-            print(f"     * 단계 {issue['step']+1}: '{issue['target']}'(으)로 이동 (거리: {issue['distance']}px, ID: {issue['ID']})")
-
-
+    print("\n[통과 포인트]")
+    for p in eff["passed"]:
+        print(f"  v {p['check']}: {p['message']}")
+        
+    print("\n[개선 필요 포인트]")
+    for f in eff["failed"]:
+        print(f"  ! {f['check']}: {f['message']}")
     print("="*40 + "\n")

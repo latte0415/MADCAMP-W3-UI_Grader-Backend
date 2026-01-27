@@ -171,15 +171,13 @@ def check_accessibility(json_path=None, data=None):
     print(f"--- Accessibility & Usability Checklist Result for {url} ---")
     print(f"Total elements analyzed: {len(elements)}\n")
 
-    # 결과 저장을 위한 구조 (카테고리 분리)
+    # 결과 저장을 위한 구조 표준화
     json_results = {
         "url": url,
-        "summary": {
-            "total_elements": len(elements),
-            "learnability": {"passed": 0, "failed": 0},
-            "control": {"passed": 0, "failed": 0}
-        },
-        "results": [] # 요소별 결과 리스트
+        "learnability": {"score": 0, "items": []},
+        "efficiency": {"score": 0, "items": []},
+        "control": {"score": 0, "items": []},
+        "node_id": data.get("node_id")
     }
 
     # 카테고리별 통계
@@ -385,81 +383,56 @@ def check_accessibility(json_path=None, data=None):
             checks_ctrl.append({"name": "이동 경로(Breadcrumb)", "status": "PASS", "message": "Breadcrumb 제공됨"})
         
         # ---------------------------------------------------------
-        # 결과 집계 및 저장
+        # 결과 집계 (Standardized format: Grouped by element)
         # ---------------------------------------------------------
-        
-        # 해당 요소에 Learnability 관련 체크가 있었을 경우 통계 집계
         if checks_learn:
-            if status_learn == "PASS":
-                learn_stats["passed"] += 1
-            else:
-                learn_stats["failed"] += 1
-
-        # 해당 요소에 Control 관련 체크가 있었을 경우 통계 집계
-        if checks_ctrl:
-            if status_ctrl == "PASS":
-                ctrl_stats["passed"] += 1
-            else:
-                ctrl_stats["failed"] += 1
-
-        # 결과 리스트에 추가 (체크사항이 없는 경우는 제외하거나 포함할지 결정 - 여기선 체크 있는 경우만)
-        if checks_learn or checks_ctrl:
-            json_results["results"].append({
+            json_results["learnability"]["items"].append({
                 "element": element_info,
-                "learnability": {
-                    "status": status_learn,
-                    "checks": checks_learn
-                },
-                "control": {
-                    "status": status_ctrl,
-                    "checks": checks_ctrl
-                }
+                "checks": checks_learn
             })
+            for c in checks_learn:
+                if c["status"] == "FAIL": learn_stats["failed"] += 1
+                else: learn_stats["passed"] += 1
+
+        if checks_ctrl:
+            json_results["control"]["items"].append({
+                "element": element_info,
+                "checks": checks_ctrl
+            })
+            for c in checks_ctrl:
+                if c["status"] == "FAIL": ctrl_stats["failed"] += 1
+                else: ctrl_stats["passed"] += 1
 
     # [Global Checks]
     if not has_breadcrumb:
-        ctrl_stats["failed"] += 1
-        json_results["results"].insert(0, {
-            "element": {"tag": "Page", "text": "Global Check", "id": None, "class": None, "type": "page"},
-            "learnability": {"status": "PASS", "checks": []},
-            "control": {
-                "status": "FAIL", 
-                "checks": [{"name": "이동 경로(Breadcrumb)", "status": "FAIL", "message": "Breadcrumb(이동 경로)가 제공되지 않음"}]
-            }
+        json_results["control"]["items"].append({
+            "element": {"tag": "Page", "text": "Global Check", "type": "page"},
+            "checks": [{"name": "이동 경로(Breadcrumb)", "status": "FAIL", "message": "Breadcrumb(이동 경로)가 제공되지 않음"}]
         })
+        ctrl_stats["failed"] += 1
+    else:
+        json_results["control"]["items"].append({
+            "element": {"tag": "Page", "text": "Global Check", "type": "page"},
+            "checks": [{"name": "이동 경로(Breadcrumb)", "status": "PASS", "message": "Breadcrumb 제공됨"}]
+        })
+        ctrl_stats["passed"] += 1
 
-    # 요약 정보 업데이트
-    json_results["summary"]["learnability"] = learn_stats
-    json_results["summary"]["control"] = ctrl_stats
+    # 점수 계산 (항목별 통과율 기반)
+    def calculate_score(stats):
+        total = stats["passed"] + stats["failed"]
+        return round((stats["passed"] / total * 100), 1) if total > 0 else 100.0
+
+    json_results["learnability"]["score"] = calculate_score(learn_stats)
+    json_results["control"]["score"] = calculate_score(ctrl_stats)
+    # Efficiency는 이 모듈에서 다루지 않으므로 100점(또는 N/A) 처리
+    json_results["efficiency"]["score"] = 100.0
 
     # ---------------------------------------------------------
-    # 터미널 출력 (카테고리별 분리 출력)
+    # 터미널 출력 (간단 요약)
     # ---------------------------------------------------------
-    print("### 분석 상세 결과 (Element-wise Report)")
-    
-    for res in json_results["results"]:
-        el = res["element"]
-        # 요소 정보 출력
-        type_str = "Heading" if el['type'] == 'heading' else f"<{el['tag']}>"
-        print(f"\n[Element] {type_str} Text: '{el['text']}'")
-
-        # 1. Learnability
-        learn = res["learnability"]
-        if learn["checks"]:
-            status_icon = "[PASS]" if learn["status"] == "PASS" else "[FAIL]"
-            print(f"  {status_icon} 학습 용이성 (Learnability):")
-            for c in learn["checks"]:
-                mark = "[!]" if c["status"] == "FAIL" else "[v]"
-                print(f"    {mark} {c['name']}: {c['message']}")
-
-        # 2. Control
-        ctrl = res["control"]
-        if ctrl["checks"]:
-            status_icon = "[PASS]" if ctrl["status"] == "PASS" else "[FAIL]"
-            print(f"  {status_icon} 통제 및 자유 (Control):")
-            for c in ctrl["checks"]:
-                mark = "[!]" if c["status"] == "FAIL" else "[v]"
-                print(f"    {mark} {c['name']}: {c['message']}")
+    print(f"\n[Summary]")
+    print(f"Learnability - 통과: {learn_stats['passed']}, 실패: {learn_stats['failed']} (Score: {json_results['learnability']['score']})")
+    print(f"Control      - 통과: {ctrl_stats['passed']}, 실패: {ctrl_stats['failed']} (Score: {json_results['control']['score']})")
 
     # JSON 파일 저장
     if json_path:
@@ -468,10 +441,6 @@ def check_accessibility(json_path=None, data=None):
             json.dump(json_results, f, indent=2, ensure_ascii=False)
         print(f"\n--- 결과가 저장되었습니다: {output_path} ---")
 
-    print(f"\n[Summary]")
-    print(f"Learnability - 통과: {learn_stats['passed']}, 실패: {learn_stats['failed']}")
-    print(f"Control      - 통과: {ctrl_stats['passed']}, 실패: {ctrl_stats['failed']}")
-    
     return json_results
 
 if __name__ == "__main__":
