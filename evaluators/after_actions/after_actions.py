@@ -77,6 +77,8 @@ def evaluate_after_action(edge_data: Dict[str, Any], prev_node_data: Dict[str, A
                 abs(rect1['height'] - rect2['height']) < 5)
 
     # 지연 시간 임계값 기준
+    found_relevant_indicator = False
+    
     if latency < 200:
         results["efficiency"]["latency"]["status"] = "Excellent"
         results["efficiency"]["latency"]["description"] = "반응이 매우 빠릅니다 (200ms 미만). 즉각적이라고 느껴집니다."
@@ -93,8 +95,7 @@ def evaluate_after_action(edge_data: Dict[str, Any], prev_node_data: Dict[str, A
         
         action_target = edge_data.get('action_target') # e.g., text of the clicked element
         elements = prev_node_data.get('elements', []) # All elements from the previous node
-        found_relevant_indicator = False
-
+        
         if progress_indicators:
             action_el = find_action_element(action_target, elements)
             
@@ -114,17 +115,33 @@ def evaluate_after_action(edge_data: Dict[str, Any], prev_node_data: Dict[str, A
                              desc += "(버튼 내부 로딩-텍스트 일치) "
                              break
                     
-                    # 2. Global overlay check (Large size) - Not heuristic, but covering screen
+                    
+                    # 3. Proximity check (Distance-based)
+                    # if the indicator is visually close to the button (e.g. < 100px)
                     prog_rect = prog.get('rect')
-                    if prog_rect and (prog_rect['width'] > 300 or prog_rect['height'] > 300):
-                        found_relevant_indicator = True
-                        desc += "(전체 화면/대형 로딩) "
-                        break
-                
+                    if not found_relevant_indicator and action_rect and prog_rect:
+                        # Calculate center of button
+                        btn_cx = action_rect['x'] + action_rect['width'] / 2
+                        btn_cy = action_rect['y'] + action_rect['height'] / 2
+                        
+                        # Calculate center of indicator
+                        prog_cx = prog_rect['x'] + prog_rect['width'] / 2
+                        prog_cy = prog_rect['y'] + prog_rect['height'] / 2
+                        
+                        # Euclidean distance
+                        import math
+                        distance = math.sqrt((btn_cx - prog_cx)**2 + (btn_cy - prog_cy)**2)
+                        
+                        # Threshold: 100px (heuristic)
+                        if distance < 100: # Slightly generous 100px to cover side-by-side layouts
+                             found_relevant_indicator = True
+                             desc += f"(버튼과 근접한 로딩 감지: 거리 {int(distance)}px) "
+                             break
+
                 if found_relevant_indicator:
                     desc += "이전 화면에서 클릭한 요소와 연관된 진행 표시기가 감지되어, 사용자에게 적절한 피드백을 제공했을 가능성이 높습니다."
                 else:
-                    desc += "진행 표시기가 감지되었으나, 클릭한 버튼(작업 대상) 내부에 위치하지 않았습니다. 로딩 위치를 확인해주세요."
+                    desc += "진행 표시기가 감지되었으나, 클릭한 버튼(작업 대상)과 거리가 멀어 연관성을 확신할 수 없습니다."
             else:
                  # Action target not found in elements list
                  desc += "진행 표시기가 감지되었으나, 작업 대상 요소의 위치를 파악할 수 없어 연관성을 확신할 수 없습니다."
@@ -164,9 +181,12 @@ def evaluate_after_action(edge_data: Dict[str, Any], prev_node_data: Dict[str, A
     # (2) 상태 구분 (로딩/처리중/완료/실패)
     # 느린 경우 '처리 중' 피드백이 중요
     if latency >= 1000:
-        if "progress_indicators" in prev_node_data.get("status_components", {}):
-            status_distinction["description"] = "작업 시간이 길었으며, 이전 화면에 진행 표시기가 존재했습니다. (본 작업과의 연관성 확인 필요)"
-            status_distinction["status"] = "Info"
+        if found_relevant_indicator:
+            status_distinction["description"] = "작업 시간이 길었지만, 적절한 진행 표시(로딩 등)가 제공되어 '처리 중' 상태임을 알 수 있습니다."
+            status_distinction["status"] = "Pass"
+        elif prev_node_data.get("status_components", {}).get("progress_indicators"):
+             status_distinction["description"] = "작업 시간이 길었으며, 진행 표시기가 존재하지만 클릭한 요소와의 직접적인 연관성을 찾기 어렵습니다."
+             status_distinction["status"] = "Info"
         else:
             status_distinction["description"] = "작업 시간이 길었음에도 '처리 중'임을 나타내는 명확한 지표(로딩 등)를 찾기 어렵습니다."
             status_distinction["status"] = "Weak"

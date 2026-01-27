@@ -1,9 +1,10 @@
 """노드 삽입 테스트 스크립트"""
 import os
 import sys
+import asyncio
 from pathlib import Path
-from uuid import uuid4
-from playwright.sync_api import sync_playwright
+from uuid import uuid4, UUID
+from playwright.async_api import async_playwright
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
 if str(ROOT_DIR) not in sys.path:
@@ -41,7 +42,7 @@ def create_test_run(target_url: str, start_url: str) -> str:
         raise Exception("Run 생성 실패")
 
 
-def test_node_insert():
+async def test_node_insert():
     """노드 삽입 테스트"""
     # 테스트 URL
     target_url = os.getenv("TEST_TARGET_URL", "http://localhost:5173/#lost_page")
@@ -61,21 +62,21 @@ def test_node_insert():
         
         # 2. Playwright로 페이지 열기
         print(f"\n2. 페이지 로드 중...")
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(
+        async with async_playwright() as p:
+            browser = await p.chromium.launch(headless=True)
+            context = await browser.new_context(
                 user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
                 viewport={'width': 1280, 'height': 720}
             )
-            page = context.new_page()
+            page = await context.new_page()
             
             print(f"   페이지 이동: {start_url}")
-            page.goto(start_url, wait_until="networkidle")
+            await page.goto(start_url, wait_until="networkidle")
             print(f"   ✓ 페이지 로드 완료")
             
             # 3. 노드 생성
             print(f"\n3. 노드 생성 중...")
-            node = create_or_get_node(run_id, page)
+            node = await create_or_get_node(UUID(run_id), page)
             print(f"   ✓ 노드 생성 완료")
             print(f"   Node ID: {node['id']}")
             print(f"   URL: {node['url']}")
@@ -88,7 +89,7 @@ def test_node_insert():
             
             # 4. 아티팩트 확인
             print(f"\n4. 아티팩트 조회 중...")
-            node_with_artifacts = get_node_with_artifacts(node["id"])
+            node_with_artifacts = get_node_with_artifacts(UUID(node["id"]))
             css_snapshot = None
             if node_with_artifacts and node_with_artifacts.get("artifacts"):
                 css_snapshot = node_with_artifacts["artifacts"].get("css_snapshot")
@@ -99,13 +100,13 @@ def test_node_insert():
 
             # 5. 중복 테스트 (같은 페이지에서 다시 노드 생성)
             print(f"\n5. 중복 노드 테스트 (같은 페이지에서 다시 생성)...")
-            node2 = create_or_get_node(run_id, page)
+            node2 = await create_or_get_node(UUID(run_id), page)
             if node['id'] == node2['id']:
                 print(f"   ✓ 중복 노드가 올바르게 처리됨 (같은 ID 반환)")
             else:
                 print(f"   ✗ 중복 노드 처리 실패 (다른 ID 반환)")
             
-            browser.close()
+            await browser.close()
         
         print(f"\n✓ 테스트 완료")
         print("=" * 50)
@@ -118,4 +119,4 @@ def test_node_insert():
 
 
 if __name__ == "__main__":
-    test_node_insert()
+    asyncio.run(test_node_insert())

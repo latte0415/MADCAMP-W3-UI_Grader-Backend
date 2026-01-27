@@ -111,3 +111,24 @@ def generate_content_dom_hash(content_elements: list) -> Optional[str]:
     # 정렬 후 해시
     normalized = "|".join(sorted(content_elements))
     return hashlib.sha256(normalized.encode()).hexdigest()
+
+
+def generate_input_state_hash(input_values: Dict[str, str]) -> str:
+    """
+    입력 필드 값들로 해시 생성
+    
+    Args:
+        input_values: 입력 필드 값 딕셔너리 {selector: value}
+    
+    Returns:
+        SHA-256 해시 문자열
+    """
+    if not input_values:
+        # 입력 필드가 없으면 빈 해시 반환
+        return hashlib.sha256(b"").hexdigest()
+    
+    # 키를 정렬하여 일관된 해시 생성
+    sorted_items = sorted(input_values.items())
+    # "key=value" 형식으로 조인
+    normalized = "|".join([f"{k}={v}" for k, v in sorted_items])
+    return hashlib.sha256(normalized.encode()).hexdigest()

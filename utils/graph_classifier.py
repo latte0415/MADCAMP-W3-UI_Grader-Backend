@@ -1,17 +1,21 @@
 """그래프 변화 타입 분류 유틸리티"""
 from typing import Dict, Optional
-from playwright.sync_api import Page
+from playwright.async_api import Page
 
 
-def _has_modal(page: Page) -> bool:
-    return bool(page.query_selector("[role='dialog'], [aria-modal='true']"))
+async def _has_modal(page: Page) -> bool:
+    """페이지에 dialog/aria-modal 요소 존재 여부."""
+    element = await page.query_selector("[role='dialog'], [aria-modal='true']")
+    return bool(element)
 
 
-def _has_drawer(page: Page) -> bool:
-    return bool(page.query_selector("[data-drawer], [data-sidebar], [aria-expanded='true']"))
+async def _has_drawer(page: Page) -> bool:
+    """페이지에 drawer/sidebar 등 펼침 요소 존재 여부."""
+    element = await page.query_selector("[data-drawer], [data-sidebar], [aria-expanded='true']")
+    return bool(element)
 
 
-def classify_change(
+async def classify_change(
     before_node: Dict,
     after_node: Optional[Dict],
     page: Page
@@ -31,9 +35,9 @@ def classify_change(
         return "new_page"
 
     # overlay/drawer 힌트 우선
-    if _has_modal(page):
+    if await _has_modal(page):
         return "modal_overlay"
-    if _has_drawer(page):
+    if await _has_drawer(page):
         return "drawer"
 
     # 동일 노드인지 확인
@@ -47,3 +51,36 @@ def classify_change(
         return "same_node"
 
     return "interaction_only"
+
+
+def compute_next_depths(before_node: Optional[Dict], depth_diff_type: str) -> Dict[str, int]:
+    """
+    depth_diff_type에 따라 다음 노드의 depth를 계산합니다.
+
+    Args:
+        before_node: 이전 노드 (route/modal/interaction depth 기준)
+        depth_diff_type: same_node | interaction_only | new_page | modal_overlay | drawer
+
+    Returns:
+        {"route_depth", "modal_depth", "interaction_depth"}
+    """
+    base_route = int((before_node or {}).get("route_depth") or 0)
+    base_modal = int((before_node or {}).get("modal_depth") or 0)
+    base_interaction = int((before_node or {}).get("interaction_depth") or 0)
+
+    route_depth = base_route
+    modal_depth = base_modal
+    interaction_depth = base_interaction
+
+    if depth_diff_type == "new_page":
+        route_depth += 1
+    elif depth_diff_type in ("modal_overlay", "drawer"):
+        modal_depth += 1
+    elif depth_diff_type == "interaction_only":
+        interaction_depth += 1
+
+    return {
+        "route_depth": route_depth,
+        "modal_depth": modal_depth,
+        "interaction_depth": interaction_depth
+    }

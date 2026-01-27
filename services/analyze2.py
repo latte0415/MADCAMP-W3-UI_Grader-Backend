@@ -25,20 +25,20 @@ except ImportError:
     from services.element_extractor import ElementExtractor
     from evaluators.doing_actions.doing_actions import evaluate_doing_actions
 
-def analyze_action_chain(action_ids):
-    print(f"Analyzing chain of {len(action_ids)} actions...")
+def analyze_action_chain(edge_ids):
+    print(f"Analyzing chain of {len(edge_ids)} edges...")
     
     chain_data = []
     previous_to_node_id = None
 
-    for i, action_id in enumerate(action_ids):
+    for i, edge_id in enumerate(edge_ids):
         step_data = {}
-        print(f"\n{'='*20} Step {i+1} : Action {action_id} {'='*20}")
+        print(f"\n{'='*20} Step {i+1} : Edge {edge_id} {'='*20}")
         
         # 1. Load Action (Edge)
-        edge_data = get_edge_by_id(action_id)
+        edge_data = get_edge_by_id(edge_id)
         if not edge_data:
-            print(f"[ERROR] Failed to load Edge data for ID: {action_id}")
+            print(f"[ERROR] Failed to load Edge data for ID: {edge_id}")
             previous_to_node_id = None 
             continue
         
@@ -51,8 +51,8 @@ def analyze_action_chain(action_ids):
         if previous_to_node_id and from_node_id != previous_to_node_id:
             print(f"[WARNING] Discontinuity detected! Previous To-Node ({previous_to_node_id}) != Current From-Node ({from_node_id})")
 
-        print(f"[Action Info]")
-        print(f"  ID:      {action_id}")
+        print(f"[Edge Info]")
+        print(f"  ID:      {edge_id}")
         
         # 2. Load Previous Node
         if from_node_id:
@@ -103,11 +103,11 @@ def analyze_action_chain(action_ids):
     evaluate_doing_actions(chain_data)
 
 def main():
-    parser = argparse.ArgumentParser(description="Analyze a chain of actions.")
-    parser.add_argument("action_ids", nargs='+', help="List of Action (Edge) UUIDs in order")
+    parser = argparse.ArgumentParser(description="Analyze a chain of edges.")
+    parser.add_argument("edge_ids", nargs='+', help="List of Edge UUIDs in order")
     
     args = parser.parse_args()
-    analyze_action_chain(args.action_ids)
+    analyze_action_chain(args.edge_ids)
 
 if __name__ == "__main__":
     main()

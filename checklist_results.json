@@ -1,40 +1,17 @@
 {
-  "url": "http://localhost:5173/#lost_page",
+  "url": "http://localhost:5173/phase1_analyze",
   "summary": {
-    "total_elements": 3,
+    "total_elements": 11,
     "learnability": {
-      "passed": 2,
-      "failed": 1
+      "passed": 1,
+      "failed": 7
     },
     "control": {
-      "passed": 0,
-      "failed": 1
+      "passed": 2,
+      "failed": 0
     }
   },
   "results": [
-    {
-      "element": {
-        "tag": "Page",
-        "text": "Global Check",
-        "id": null,
-        "class": null,
-        "type": "page"
-      },
-      "learnability": {
-        "status": "PASS",
-        "checks": []
-      },
-      "control": {
-        "status": "FAIL",
-        "checks": [
-          {
-            "name": "이동 경로(Breadcrumb)",
-            "status": "FAIL",
-            "message": "Breadcrumb(이동 경로)가 제공되지 않음"
-          }
-        ]
-      }
-    },
     {
       "element": {
         "tag": "button",
@@ -86,7 +63,151 @@
     {
       "element": {
         "tag": "button",
-        "text": "Back",
+        "text": "Low Contrast BG",
+        "id": "",
+        "class": "violation-low-contrast-bg",
+        "type": "button"
+      },
+      "learnability": {
+        "status": "FAIL",
+        "checks": [
+          {
+            "name": "표준 태그 사용",
+            "status": "PASS",
+            "message": "표준 태그 <button> 사용됨"
+          },
+          {
+            "name": "레이블(텍스트) 제공",
+            "status": "PASS",
+            "message": "레이블 존재함"
+          },
+          {
+            "name": "마우스 커서 스타일",
+            "status": "FAIL",
+            "message": "커서가 'pointer'가 아님 ('default')"
+          },
+          {
+            "name": "터치 타겟 크기",
+            "status": "PASS",
+            "message": "크기 적절함 (150x37px)"
+          },
+          {
+            "name": "텍스트 명암비(가독성)",
+            "status": "FAIL",
+            "message": "대비가 낮음: 3.11:1 (최소 4.5:1 권장)"
+          },
+          {
+            "name": "배경 대비 가시성",
+            "status": "FAIL",
+            "message": "배경과 구분이 잘 안됨: 1.14:1 (최소 3.0:1 권장)"
+          }
+        ]
+      },
+      "control": {
+        "status": "PASS",
+        "checks": []
+      }
+    },
+    {
+      "element": {
+        "tag": "button",
+        "text": "Low Contrast Text",
+        "id": "",
+        "class": "violation-low-contrast-text",
+        "type": "button"
+      },
+      "learnability": {
+        "status": "FAIL",
+        "checks": [
+          {
+            "name": "표준 태그 사용",
+            "status": "PASS",
+            "message": "표준 태그 <button> 사용됨"
+          },
+          {
+            "name": "레이블(텍스트) 제공",
+            "status": "PASS",
+            "message": "레이블 존재함"
+          },
+          {
+            "name": "마우스 커서 스타일",
+            "status": "FAIL",
+            "message": "커서가 'pointer'가 아님 ('default')"
+          },
+          {
+            "name": "터치 타겟 크기",
+            "status": "PASS",
+            "message": "크기 적절함 (156x35px)"
+          },
+          {
+            "name": "텍스트 명암비(가독성)",
+            "status": "FAIL",
+            "message": "대비가 낮음: 1.52:1 (최소 4.5:1 권장)"
+          },
+          {
+            "name": "배경 대비 가시성",
+            "status": "PASS",
+            "message": "배경과 구분 명확함"
+          }
+        ]
+      },
+      "control": {
+        "status": "PASS",
+        "checks": []
+      }
+    },
+    {
+      "element": {
+        "tag": "button",
+        "text": "Disabled (Looks Enabled)",
+        "id": "",
+        "class": "violation-bad-cursor-disabled",
+        "type": "button"
+      },
+      "learnability": {
+        "status": "FAIL",
+        "checks": [
+          {
+            "name": "표준 태그 사용",
+            "status": "PASS",
+            "message": "표준 태그 <button> 사용됨"
+          },
+          {
+            "name": "레이블(텍스트) 제공",
+            "status": "PASS",
+            "message": "레이블 존재함"
+          },
+          {
+            "name": "마우스 커서 스타일",
+            "status": "FAIL",
+            "message": "비활성 요소에 'pointer' 커서가 사용됨"
+          },
+          {
+            "name": "터치 타겟 크기",
+            "status": "FAIL",
+            "message": "크기가 너무 작음: 179x19px (최소 24px 권장)"
+          },
+          {
+            "name": "텍스트 명암비(가독성)",
+            "status": "FAIL",
+            "message": "대비가 낮음: 3.58:1 (최소 4.5:1 권장)"
+          },
+          {
+            "name": "배경 대비 가시성",
+            "status": "FAIL",
+            "message": "배경과 구분이 잘 안됨: 1.61:1 (최소 3.0:1 권장)"
+          }
+        ]
+      },
+      "control": {
+        "status": "PASS",
+        "checks": []
+      }
+    },
+    {
+      "element": {
+        "tag": "button",
+        "text": "💾",
         "id": "",
         "class": "",
         "type": "button"
@@ -111,8 +232,8 @@
           },
           {
             "name": "터치 타겟 크기",
-            "status": "FAIL",
-            "message": "크기가 너무 작음: 48x21px (최소 24px 권장)"
+            "status": "PASS",
+            "message": "크기 적절함 (26x40px)"
           },
           {
             "name": "텍스트 명암비(가독성)",
@@ -122,7 +243,55 @@
           {
             "name": "배경 대비 가시성",
             "status": "FAIL",
-            "message": "배경과 구분이 잘 안됨: 1.05:1 (최소 3.0:1 권장)"
+            "message": "배경과 구분이 잘 안됨: 1.15:1 (최소 3.0:1 권장)"
+          }
+        ]
+      },
+      "control": {
+        "status": "PASS",
+        "checks": []
+      }
+    },
+    {
+      "element": {
+        "tag": "button",
+        "text": "Go to 'No Breadcrumb' Page",
+        "id": "",
+        "class": "action-btn",
+        "type": "button"
+      },
+      "learnability": {
+        "status": "FAIL",
+        "checks": [
+          {
+            "name": "표준 태그 사용",
+            "status": "PASS",
+            "message": "표준 태그 <button> 사용됨"
+          },
+          {
+            "name": "레이블(텍스트) 제공",
+            "status": "PASS",
+            "message": "레이블 존재함"
+          },
+          {
+            "name": "마우스 커서 스타일",
+            "status": "FAIL",
+            "message": "커서가 'pointer'가 아님 ('default')"
+          },
+          {
+            "name": "터치 타겟 크기",
+            "status": "FAIL",
+            "message": "크기가 너무 작음: 199x21px (최소 24px 권장)"
+          },
+          {
+            "name": "텍스트 명암비(가독성)",
+            "status": "PASS",
+            "message": "대비 적절함 (18.26:1)"
+          },
+          {
+            "name": "배경 대비 가시성",
+            "status": "FAIL",
+            "message": "배경과 구분이 잘 안됨: 1.15:1 (최소 3.0:1 권장)"
           }
         ]
       },
@@ -136,11 +305,54 @@
         "tag": "a",
         "text": "Dashboard",
         "id": "",
-        "class": "nav-link",
+        "class": "nav-link active",
         "type": "link"
       },
       "learnability": {
+        "status": "FAIL",
+        "checks": [
+          {
+            "name": "표준 태그 사용",
+            "status": "PASS",
+            "message": "표준 태그 <a> 사용됨"
+          },
+          {
+            "name": "마우스 커서 스타일",
+            "status": "FAIL",
+            "message": "커서가 'pointer'가 아님 ('default')"
+          },
+          {
+            "name": "터치 타겟 크기",
+            "status": "PASS",
+            "message": "크기 적절함 (199x39px)"
+          },
+          {
+            "name": "텍스트 명암비(가독성)",
+            "status": "FAIL",
+            "message": "대비가 낮음: 2.44:1 (최소 4.5:1 권장)"
+          },
+          {
+            "name": "배경 대비 가시성",
+            "status": "FAIL",
+            "message": "배경과 구분이 잘 안됨: 2.32:1 (최소 3.0:1 권장)"
+          }
+        ]
+      },
+      "control": {
         "status": "PASS",
+        "checks": []
+      }
+    },
+    {
+      "element": {
+        "tag": "a",
+        "text": "Dashboard",
+        "id": "",
+        "class": "",
+        "type": "link"
+      },
+      "learnability": {
+        "status": "FAIL",
         "checks": [
           {
             "name": "표준 태그 사용",
@@ -154,19 +366,65 @@
           },
           {
             "name": "터치 타겟 크기",
-            "status": "PASS",
-            "message": "크기 적절함 (199x39px)"
+            "status": "FAIL",
+            "message": "크기가 너무 작음: 78x16px (최소 24px 권장)"
           },
           {
             "name": "텍스트 명암비(가독성)",
-            "status": "PASS",
-            "message": "대비 적절함 (11.99:1) (투명 배경, 부모 배경색 기준)"
+            "status": "FAIL",
+            "message": "대비가 낮음: 3.62:1 (최소 4.5:1 권장) (투명 배경, 부모 배경색 기준)"
           }
         ]
       },
       "control": {
         "status": "PASS",
         "checks": []
+      }
+    },
+    {
+      "element": {
+        "tag": "h2",
+        "text": "Phase 1: First Impression",
+        "id": "",
+        "class": "",
+        "type": "heading"
+      },
+      "learnability": {
+        "status": "PASS",
+        "checks": []
+      },
+      "control": {
+        "status": "PASS",
+        "checks": [
+          {
+            "name": "페이지 제목(Heading)",
+            "status": "PASS",
+            "message": "헤딩 존재함: 'Phase 1: First Impression'"
+          }
+        ]
+      }
+    },
+    {
+      "element": {
+        "tag": "nav",
+        "text": "Dashboard\nPhase 1: Analyze",
+        "id": "",
+        "class": "",
+        "type": "nav"
+      },
+      "learnability": {
+        "status": "PASS",
+        "checks": []
+      },
+      "control": {
+        "status": "PASS",
+        "checks": [
+          {
+            "name": "이동 경로(Breadcrumb)",
+            "status": "PASS",
+            "message": "Breadcrumb 제공됨"
+          }
+        ]
       }
     }
   ]

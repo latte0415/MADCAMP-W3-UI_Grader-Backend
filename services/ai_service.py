@@ -1,0 +1,385 @@
+from infra.langchain.config.context import set_run_id, set_from_node_id
+from typing import Dict, Optional, Any, List
+from uuid import UUID
+
+from infra.langchain.runnables.chain import run_chain
+        
+from repositories.ai_memory_repository import view_run_memory, update_run_memory, delete_pending_action
+from repositories.edge_repository import get_edge_by_id, update_edge_intent_label
+from repositories.node_repository import get_node_by_id
+from services.pending_action_service import PendingActionService
+from schemas.filter_action import FilterActionOutput
+from schemas.run_memory import UpdateRunMemoryOutput
+from schemas.guess_intent import GuessIntentOutput
+
+class AiService:
+    """AI·체인 관련 서비스 (모든 기능이 chain 기반)."""
+
+    def __init__(self):
+        pass
+
+    def _get_run_memory_content(self, run_id: UUID) -> Dict[str, Any]:
+        """
+        run_memory의 content를 조회합니다.
+        
+        Args:
+            run_id: 탐색 세션 ID
+            
+        Returns:
+            run_memory의 content 딕셔너리 (없으면 빈 딕셔너리)
+        """
+        run_memory_data = view_run_memory(run_id)
+        return run_memory_data.get("content", {}) if run_memory_data else {}
+
+    def _extract_actions_from_result(self, result: Any) -> List[Dict[str, Any]]:
+        """
+        Chain 결과에서 처리 가능한 액션 리스트를 추출합니다.
+        
+        Args:
+            result: Chain 실행 결과 (FilterActionOutput 또는 dict)
+            
+        Returns:
+            처리 가능한 액션 리스트 (action_value가 채워진 딕셔너리 형태)
+        """
+        if isinstance(result, FilterActionOutput):
+            return [action.model_dump(exclude_none=False) for action in result.actions]
+        elif isinstance(result, dict) and "actions" in result:
+            return result["actions"]
+        else:
+            return []
+
+    def _extract_content_from_result(
+        self, 
+        result: Any, 
+        fallback_content: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Chain 결과에서 content를 추출합니다.
+        
+        Args:
+            result: Chain 실행 결과 (UpdateRunMemoryOutput 또는 dict)
+            fallback_content: 파싱 실패 시 사용할 기본 content
+            
+        Returns:
+            추출된 content 딕셔너리
+        """
+        if isinstance(result, UpdateRunMemoryOutput):
+            return result.content
+        elif isinstance(result, dict) and "content" in result:
+            return result["content"]
+        else:
+            return fallback_content
+
+    def _create_action_key(
+        self, 
+        action: Dict[str, Any], 
+        include_selector: bool = True
+    ) -> tuple:
+        """
+        액션을 고유하게 식별하기 위한 키를 생성합니다.
+        
+        Args:
+            action: 액션 딕셔너리
+            include_selector: selector, role, name을 키에 포함할지 여부
+            
+        Returns:
+            액션 식별 키 튜플
+        """
+        if include_selector:
+            return (
+                action.get("action_type", ""),
+                action.get("action_target", ""),
+                action.get("selector", ""),
+                action.get("role", ""),
+                action.get("name", "")
+            )
+        else:
+            return (
+                action.get("action_type", ""),
+                action.get("action_target", "")
+            )
+
+    async def get_ai_response(self) -> str:
+        """chat-test chain 실행. Returns: AI 응답 문자열."""
+        result = await run_chain(label="chat-test")
+        return str(result)
+
+    async def get_ai_response_with_photo(
+        self,
+        image_base64: str,
+        auxiliary_data: Optional[Dict[str, Any]] = None
+    ) -> str:
+        """
+        이미지와 보조 자료를 포함하여 AI 응답을 받습니다.
+        
+        Args:
+            image_base64: base64로 인코딩된 이미지
+            auxiliary_data: 보조 자료 딕셔너리 (사용자가 인지할 수 있는 정보만)
+        
+        Returns:
+            AI 응답 문자열
+        """
+        result = await run_chain(
+            label="photo-test",
+            image_base64=image_base64,
+            auxiliary_data=auxiliary_data,
+            use_vision=True
+        )
+        return str(result)
+
+    async def update_run_memory_with_ai(
+        self,
+        image_base64: str,
+        run_id: UUID,
+        auxiliary_data: Optional[Dict[str, Any]] = None
+    ) -> str:
+        """
+        이미지와 run_id를 포함하여 run_memory를 업데이트합니다.
+        
+        Args:
+            image_base64: base64로 인코딩된 이미지
+            run_id: run_id
+            auxiliary_data: 보조 자료 딕셔너리 (사용자가 인지할 수 있는 정보만)
+        
+        Returns:
+            업데이트된 run_memory 정보 딕셔너리 (문자열로 변환)
+        """
+        # 1. 현재 run_memory 조회
+        run_memory_content = self._get_run_memory_content(run_id)
+        
+        # 2. Chain 실행 (이미지 + run_memory)
+        result = await run_chain(
+            label="update-run-memory",
+            image_base64=image_base64,
+            auxiliary_data=auxiliary_data,
+            run_memory=run_memory_content,
+            use_vision=True
+        )
+        
+        # 3. Chain 결과에서 content 추출 및 run_memory 업데이트
+        updated_content = self._extract_content_from_result(result, run_memory_content)
+        
+        # 4. run_memory 실제 업데이트
+        updated_memory = update_run_memory(run_id, updated_content)
+        
+        return str(updated_memory)
+
+    async def filter_input_actions_with_run_memory(
+        self,
+        input_actions: List[Dict[str, Any]],
+        run_id: UUID,
+        from_node_id: UUID
+    ) -> List[Dict[str, Any]]:
+        """
+        입력 액션을 run_memory에 저장된 정보를 기반으로 필터링합니다.
+        
+        Args:
+            input_actions: 입력값이 필요한 액션 리스트 (딕셔너리 형태)
+            run_id: 탐색 세션 ID
+            from_node_id: 시작 노드 ID
+        
+        Returns:
+            처리 가능한 액션 리스트 (action_value가 채워진 딕셔너리 형태)
+        """
+        # 1. context 설정
+        set_run_id(run_id)
+        set_from_node_id(from_node_id)
+        
+        # 2. run_memory 조회
+        run_memory_content = self._get_run_memory_content(run_id)
+        
+        # 3. chain에 input_actions와 run_memory 전달
+        result = await run_chain(
+            label="filter-action",
+            input_actions=input_actions,
+            run_memory=run_memory_content,
+            use_vision=False
+        )
+        
+        # 4. chain 결과에서 처리 가능한 액션 추출
+        processable_actions = self._extract_actions_from_result(result)
+        
+        # 5. 처리 불가한 액션 식별 및 pending action에 삽입
+        processable_action_keys = set()
+        for action in processable_actions:
+            key = self._create_action_key(action, include_selector=True)
+            processable_action_keys.add(key)
+        
+        # input_actions 중 처리 불가한 액션 찾기
+        for action in input_actions:
+            # is_filled가 true인 액션은 무시
+            if action.get("is_filled", False):
+                continue
+            
+            action_key = self._create_action_key(action, include_selector=True)
+            
+            # 처리 가능한 액션에 포함되지 않은 경우 pending action에 삽입
+            if action_key not in processable_action_keys:
+                try:
+                    pending_action_service = PendingActionService()
+                    pending_action_service.create_pending_action(
+                        run_id=run_id,
+                        from_node_id=from_node_id,
+                        action=action,
+                        status="pending"
+                    )
+                except Exception as e:
+                    # pending action 생성 실패는 로그만 남기고 계속 진행
+                    print(f"[filter_input_actions_with_run_memory] pending action 생성 실패: {e}")
+        
+        # 6. 적절한 입력값이 있는 액션만 반환
+        return processable_actions
+    
+    async def process_pending_actions_with_run_memory(
+        self,
+        run_id: UUID
+    ) -> List[Dict[str, Any]]:
+        """
+        pending actions를 run_memory에 저장된 정보를 기반으로 필터링하고,
+        처리 가능한 액션은 삭제한 후 리스트를 반환합니다.
+        
+        Args:
+            run_id: 탐색 세션 ID
+        
+        Returns:
+            처리 가능한 액션 리스트 (action_value가 채워진 딕셔너리 형태)
+        """
+        # 1. run_memory 조회
+        run_memory_content = self._get_run_memory_content(run_id)
+        
+        # 2. pending actions 조회
+        pending_action_service = PendingActionService()
+        pending_actions = pending_action_service.list_pending_actions(
+            run_id=run_id,
+            from_node_id=None,
+            status="pending"
+        )
+        
+        # 빈 pending actions인 경우 빈 리스트 반환
+        if not pending_actions:
+            return []
+        
+        # 3. pending actions를 filter-action 입력 형태로 변환
+        pending_input_actions = []
+        for pending in pending_actions:
+            pending_dict = {
+                "action_type": pending.get("action_type", ""),
+                "action_target": pending.get("action_target", ""),
+                "action_value": pending.get("action_value", ""),
+                "selector": "",
+                "role": "",
+                "name": "",
+                "tag": "",
+                "href": "",
+                "input_type": "",
+                "placeholder": "",
+                "input_required": True,
+                "is_filled": False,
+                "current_value": ""
+            }
+            pending_input_actions.append(pending_dict)
+        
+        # 4. chain에 pending_input_actions와 run_memory 전달
+        result = await run_chain(
+            label="process-pending-actions",
+            input_actions=pending_input_actions,
+            run_memory=run_memory_content,
+            use_vision=False
+        )
+        
+        # 5. chain 결과에서 처리 가능한 액션 추출
+        processable_actions = self._extract_actions_from_result(result)
+        
+        # 6. 처리 가능한 액션에 해당하는 pending actions 삭제
+        # 매칭 키: (action_type, action_target) 조합 사용
+        # pending_action에는 selector/role/name이 없으므로 action_type + action_target으로 식별
+        processable_action_keys = set()
+        for action in processable_actions:
+            key = self._create_action_key(action, include_selector=False)
+            processable_action_keys.add(key)
+        
+        # pending actions 중 처리 가능한 것 삭제
+        for pending in pending_actions:
+            pending_key = self._create_action_key(pending, include_selector=False)
+            
+            # 처리 가능한 액션에 포함된 경우 pending action 삭제
+            if pending_key in processable_action_keys:
+                try:
+                    pending_action_id = UUID(pending.get("id"))
+                    delete_pending_action(pending_action_id)
+                except Exception as e:
+                    # pending action 삭제 실패는 로그만 남기고 계속 진행
+                    print(f"[process_pending_actions_with_run_memory] pending action 삭제 실패: {e}")
+        
+        # 7. 처리 가능한 액션 리스트 반환
+        return processable_actions
+    
+    async def guess_and_update_edge_intent(self, edge_id: UUID) -> str:
+        """
+        엣지의 의도를 추론하고 intent_label을 업데이트합니다.
+        
+        Args:
+            edge_id: 엣지 ID
+        
+        Returns:
+            업데이트된 intent_label 문자열
+        
+        Note:
+            - from_node == to_node인 경우 스킵
+            - LLM 응답이 15자를 초과하면 자동으로 잘라냄
+        """
+        try:
+            # 1. 엣지 정보 조회
+            edge = get_edge_by_id(edge_id)
+            if not edge:
+                raise ValueError(f"엣지를 찾을 수 없습니다: {edge_id}")
+            
+            from_node_id = edge.get("from_node_id")
+            to_node_id = edge.get("to_node_id")
+            
+            # from_node == to_node인 경우 스킵
+            if not from_node_id or not to_node_id or from_node_id == to_node_id:
+                return ""
+            
+            # 2. 노드 정보 조회
+            from_node = get_node_by_id(UUID(from_node_id))
+            to_node = get_node_by_id(UUID(to_node_id))
+            
+            if not from_node:
+                raise ValueError(f"시작 노드를 찾을 수 없습니다: {from_node_id}")
+            if not to_node:
+                raise ValueError(f"도착 노드를 찾을 수 없습니다: {to_node_id}")
+            
+            # 3. Chain 실행 (guess-intent)
+            result = await run_chain(
+                label="guess-intent",
+                from_node=from_node,
+                to_node=to_node,
+                edge=edge,
+                use_vision=False
+            )
+            
+            # 4. Chain 결과에서 intent_label 추출
+            intent_label = ""
+            if isinstance(result, GuessIntentOutput):
+                intent_label = result.intent_label
+            elif isinstance(result, dict) and "intent_label" in result:
+                intent_label = result["intent_label"]
+            else:
+                # 문자열로 반환된 경우
+                intent_label = str(result).strip()
+            
+            # 5. 15자 초과 시 자동으로 잘라내기
+            if len(intent_label) > 15:
+                intent_label = intent_label[:15]
+            
+            # 6. 엣지 intent_label 업데이트
+            if intent_label:
+                update_edge_intent_label(edge_id, intent_label)
+            
+            return intent_label
+            
+        except Exception as e:
+            # 에러 발생 시 로그만 남기고 빈 문자열 반환
+            print(f"[guess_and_update_edge_intent] intent_label 생성 실패: {e}")
+            return ""

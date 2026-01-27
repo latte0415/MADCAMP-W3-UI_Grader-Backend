@@ -1,34 +1,59 @@
 """DOM 기반 액션 추출 유틸리티"""
-from typing import Dict, List, Optional
-from playwright.sync_api import Page, ElementHandle
+import re
+from typing import Dict, List, Optional, Tuple
+from playwright.async_api import Page, ElementHandle
 
 
-def _get_role(element: ElementHandle) -> Optional[str]:
-    role = element.get_attribute("role")
+def parse_action_target(action_target: str) -> Tuple[Optional[str], Optional[str]]:
+    """
+    action_target 문자열에서 role과 name을 파싱합니다.
+    
+    Args:
+        action_target: "role=textbox name=E-mail" 형식의 문자열
+    
+    Returns:
+        (role, name) 튜플
+    """
+    if not action_target:
+        return None, None
+    
+    role_match = re.search(r"role=([^\s]+)", action_target)
+    name_match = re.search(r"name=(.+)", action_target)
+    
+    role = role_match.group(1) if role_match else None
+    name = name_match.group(1).strip() if name_match else None
+    
+    return role, name
+
+
+async def _get_role(element: ElementHandle) -> Optional[str]:
+    """요소의 ARIA role 또는 태그/타입 기반 추론 role 반환."""
+    role = await element.get_attribute("role")
     if role:
         return role
-    tag = element.evaluate("el => el.tagName.toLowerCase()")
+    tag = await element.evaluate("el => el.tagName.toLowerCase()")
     if tag == "a":
         return "link"
     if tag == "button":
         return "button"
     if tag == "input":
-        input_type = element.get_attribute("type") or "text"
+        input_type = await element.get_attribute("type") or "text"
         if input_type in ("submit", "button"):
             return "button"
         return "textbox"
     return None
 
 
-def _get_name(element: ElementHandle) -> str:
-    aria_label = element.get_attribute("aria-label")
+async def _get_name(element: ElementHandle) -> str:
+    """aria-label, placeholder, inner_text 순으로 요소 이름 추출."""
+    aria_label = await element.get_attribute("aria-label")
     if aria_label:
         return aria_label.strip()
-    placeholder = element.get_attribute("placeholder")
+    placeholder = await element.get_attribute("placeholder")
     if placeholder:
         return placeholder.strip()
     try:
-        text = element.inner_text().strip()
+        text = (await element.inner_text()).strip()
         if text:
             return text
     except Exception:
@@ -36,19 +61,20 @@ def _get_name(element: ElementHandle) -> str:
     return ""
 
 
-def _build_selector(element: ElementHandle) -> str:
-    tag = element.evaluate("el => el.tagName.toLowerCase()")
+async def _build_selector(element: ElementHandle) -> str:
+    """href/id/name/class 순으로 CSS selector 생성."""
+    tag = await element.evaluate("el => el.tagName.toLowerCase()")
     if tag == "a":
-        href = element.get_attribute("href")
+        href = await element.get_attribute("href")
         if href:
             return f"a[href='{href}']"
-    element_id = element.get_attribute("id")
+    element_id = await element.get_attribute("id")
     if element_id:
         return f"{tag}#{element_id}"
-    name_attr = element.get_attribute("name")
+    name_attr = await element.get_attribute("name")
     if name_attr:
         return f"{tag}[name='{name_attr}']"
-    class_attr = element.get_attribute("class")
+    class_attr = await element.get_attribute("class")
     if class_attr:
         class_list = class_attr.split()
         if class_list:
@@ -57,12 +83,13 @@ def _build_selector(element: ElementHandle) -> str:
     return tag
 
 
-def _make_action(action_type: str, element: ElementHandle, action_value: Optional[str] = None) -> Dict:
-    role = _get_role(element) or ""
-    name = _get_name(element)
-    selector = _build_selector(element)
-    tag = element.evaluate("el => el.tagName.toLowerCase()")
-    href = element.get_attribute("href") if tag == "a" else None
+async def _make_action(action_type: str, element: ElementHandle, action_value: Optional[str] = None) -> Dict:
+    """요소로부터 action_type에 맞는 액션 딕셔너리 생성."""
+    role = (await _get_role(element)) or ""
+    name = await _get_name(element)
+    selector = await _build_selector(element)
+    tag = await element.evaluate("el => el.tagName.toLowerCase()")
+    href = await element.get_attribute("href") if tag == "a" else None
     action_target = f"role={role} name={name}".strip()
     if not role and not name:
         action_target = selector
@@ -79,7 +106,7 @@ def _make_action(action_type: str, element: ElementHandle, action_value: Optiona
     }
 
 
-def extract_actions_from_page(page: Page) -> List[Dict]:
+async def extract_actions_from_page(page: Page) -> List[Dict]:
     """
     DOM 스캔으로 가능한 액션 추출
     
@@ -96,13 +123,14 @@ def extract_actions_from_page(page: Page) -> List[Dict]:
         "input[type='submit']"
     ]
     for selector in click_selectors:
-        for element in page.query_selector_all(selector):
+        elements = await page.query_selector_all(selector)
+        for element in elements:
             try:
-                if not element.is_visible():
+                if not await element.is_visible():
                     continue
             except Exception:
                 pass
-            actions.append(_make_action("click", element))
+            actions.append(await _make_action("click", element))
 
     # Hover 후보 (메뉴/팝업 트리거로 추정되는 요소)
     hover_selectors = [
@@ -113,13 +141,14 @@ def extract_actions_from_page(page: Page) -> List[Dict]:
         "nav button"
     ]
     for selector in hover_selectors:
-        for element in page.query_selector_all(selector):
+        elements = await page.query_selector_all(selector)
+        for element in elements:
             try:
-                if not element.is_visible():
+                if not await element.is_visible():
                     continue
             except Exception:
                 pass
-            actions.append(_make_action("hover", element))
+            actions.append(await _make_action("hover", element))
 
     # 입력 필드 fill
     fill_selectors = [
@@ -130,13 +159,14 @@ def extract_actions_from_page(page: Page) -> List[Dict]:
         "textarea"
     ]
     for selector in fill_selectors:
-        for element in page.query_selector_all(selector):
+        elements = await page.query_selector_all(selector)
+        for element in elements:
             try:
-                if not element.is_visible():
+                if not await element.is_visible():
                     continue
             except Exception:
                 pass
-            actions.append(_make_action("fill", element))
+            actions.append(await _make_action("fill", element))
 
     # 중복 제거 (action_type + action_target + action_value)
     deduped: Dict[str, Dict] = {}
@@ -145,3 +175,43 @@ def extract_actions_from_page(page: Page) -> List[Dict]:
         deduped[key] = action
 
     return list(deduped.values())
+
+
+def filter_input_required_actions(actions: List[Dict]) -> List[Dict]:
+    """
+    입력 정보가 필요한 액션만 필터링합니다.
+    - 텍스트 입력, 드롭다운, 토글 등 포함
+    """
+    input_roles = {
+        "textbox",
+        "combobox",
+        "listbox",
+        "switch",
+        "checkbox",
+        "radio",
+        "spinbutton",
+        "slider"
+    }
+    input_tags = {"input", "textarea", "select"}
+    filtered: List[Dict] = []
+
+    for action in actions:
+        action_type = action.get("action_type", "")
+        role = (action.get("role") or "").lower()
+        tag = (action.get("tag") or "").lower()
+        selector = (action.get("selector") or "").lower()
+
+        if action_type == "fill":
+            filtered.append(action)
+            continue
+        if role in input_roles:
+            filtered.append(action)
+            continue
+        if tag in input_tags:
+            filtered.append(action)
+            continue
+        if selector.startswith(("input", "textarea", "select")):
+            filtered.append(action)
+            continue
+
+    return filtered

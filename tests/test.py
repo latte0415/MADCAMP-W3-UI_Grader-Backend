@@ -1,8 +1,9 @@
+import asyncio
 import os
 import sys
 from pathlib import Path
 from uuid import UUID
-from playwright.sync_api import sync_playwright
+from playwright.async_api import async_playwright
 
 # 프로젝트 루트 경로 설정 (imports를 위해)
 ROOT_DIR = Path(__file__).resolve().parents[1]
@@ -27,12 +28,12 @@ def create_test_run(target_url: str, start_url: str) -> str:
         return result.data[0]["id"]
     raise Exception("Run 생성 실패")
 
-def test_phase1_ambiguous_login_button():
-    target_url = "http://localhost:5173/#phase1_analyze"
-    start_url = "http://localhost:5173/#phase1_analyze"
+async def test_phase2_depth_sequence():
+    target_url = "http://localhost:5173/phase2_action"
+    start_url = "http://localhost:5173/phase2_action"
 
     print("=" * 50)
-    print(f"Test Start: Clicking 'Ambiguous Login' Button on {start_url}")
+    print(f"Test Start: Multi-step Sequence on {start_url}")
     print("=" * 50)
 
     try:
@@ -40,82 +41,95 @@ def test_phase1_ambiguous_login_button():
         run_id = create_test_run(target_url, start_url)
         print(f"\n✓ Run Created: {run_id}")
 
-        with sync_playwright() as p:
+        async with async_playwright() as p:
             # 2. 브라우저 실행
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(
+            browser = await p.chromium.launch(headless=True)
+            context = await browser.new_context(
                 viewport={'width': 1280, 'height': 720}
             )
-            page = context.new_page()
+            page = await context.new_page()
             
             # 3. 페이지 이동
             print(f"✓ Navigating to {start_url}...")
-            page.goto(start_url, wait_until="networkidle")
+            await page.goto(start_url, wait_until="networkidle")
 
-            # 4. 현재 상태 Node 생성/조회
-            from_node = create_or_get_node(run_id, page)
-            print(f"✓ Current Node ID: {from_node['id']}")
+            # Sequence of keywords to click
+            keywords = [
+                "다단계 작업 시작하기 (Depth 1)",
+                "다음 단계로 (Depth 2) >",
+                "다음 단계로 (Depth 3) >",
+                "★ 목표물 클릭 (완료) ★"
+            ]
 
-            # 5. 액션 추출
-            actions = extract_actions_from_page(page)
-            print(f"✓ Extracted {len(actions)} actions")
+            current_node_id = None
 
-            # 6. 목표 버튼 찾기
-            # <button class="action-btn" onclick="...">Go to 'Ambiguous Login' Page</button>
-            target_text = "Go to 'Ambiguous Login' Page"
-            target_action = None
+            for idx, search_keyword in enumerate(keywords, start=1):
+                print(f"\n--- Step {idx}: Searching for '{search_keyword}' ---")
+                
+                # 4. 현재 상태 Node 생성/조회
+                node = await create_or_get_node(run_id, page)
+                current_node_id = node['id']
+                print(f"✓ Current Node ID: {current_node_id}")
 
-            for action_item in actions:
-                # 1. action_target 문자열 자체에 텍스트가 포함되어 있는지 확인 (가장 확실하고 빠름)
-                # 예: "role=button name=Go to 'Ambiguous Login' Page"
-                if target_text in action_item.get('action_target', ''):
-                    target_action = action_item
-                    break
+                # 5. 액션 추출
+                actions = await extract_actions_from_page(page)
+                print(f"✓ Extracted {len(actions)} actions")
 
-                # 2. 텍스트나 HTML 등에서 식별 가능한지 확인 (이전 로직 fallback)
-                try:
-                    locator = page.locator(action_item['action_target'])
-                    if locator.count() > 0:
-                        text = locator.first.inner_text()
-                        if target_text in text:
-                            target_action = action_item
-                            break
-                except:
-                    continue
-            
-            if not target_action:
-                # 만약 text 매칭으로 못 찾았다면, action-btn 클래스로 찾아봄 (보완책)
+                # 6. 목표 버튼 찾기
+                target_action = None
                 for action_item in actions:
-                    if "action-btn" in action_item.get("html", "") and "Ambiguous Login" in action_item.get("html", ""):
+                    is_match = False
+                    
+                    # 1. 메타데이터(target, html)에서 확인
+                    metadata = (action_item.get('action_target', '') + action_item.get('html', '')).lower()
+                    if search_keyword.lower() in metadata :
+                        is_match = True
+                    
+                    # 2. 실제 텍스트 내용 확인 (메타데이터에 없을 경우)
+                    if not is_match:
+                        try:
+                            # action_target is usually a selector or role string
+                            # extract_actions_from_page might return something that locator can use
+                            selector = action_item.get('action_target')
+                            if selector:
+                                locator = page.locator(selector)
+                                if await locator.count() > 0:
+                                    text = (await locator.first.inner_text()).lower()
+                                    if search_keyword.lower() in text:
+                                        is_match = True
+                        except:
+                            pass
+                    
+                    if is_match:
                         target_action = action_item
                         break
 
-            if not target_action:
-                print(f"✗ Failed to find the button with text: {target_text}")
-                print("Available actions:")
-                for a in actions:
-                    print(f" - {a.get('action_target')} | {a.get('action_type')}")
-                return
+                if not target_action:
+                    print(f"✗ Failed to find the button with text: {search_keyword}")
+                    print("Available actions (first 5):")
+                    for a in actions[:5]:
+                        print(f" - {a.get('action_target')} | {a.get('text', '')}")
+                    break
 
-            print(f"✓ Found Target Action: {target_action['action_target']}")
+                print(f"✓ Found Target Action: {target_action['action_target']}")
 
-            # 7. 엣지 실행 및 기록
-            edge = perform_and_record_edge(
-                UUID(run_id),
-                UUID(from_node["id"]),
-                page,
-                target_action
-            )
-            print(f"✓ Edge Recorded: {edge['id']}")
-            
-            if edge.get("to_node_id"):
-                print(f"✓ Transitioned to Node: {edge['to_node_id']}")
-            else:
-                print("✓ No state change recorded (Self-loop or error)")
+                # 7. 엣지 실행 및 기록
+                edge = await perform_and_record_edge(
+                    UUID(run_id),
+                    UUID(current_node_id),
+                    page,
+                    target_action
+                )
+                print(f"✓ Edge Recorded: {edge['id']}")
+                print(f"✓ Outcome: {edge.get('outcome')}")
+                print(f"✓ Current URL: {page.url}")
+                
+                # Wait a bit for navigation or animations
+                await page.wait_for_timeout(500)
 
-            browser.close()
+            await browser.close()
 
-        print("\n✓ Test Completed Successfully")
+        print("\n✓ Multi-step sequence test completed")
         print("=" * 50)
 
     except Exception as e:
@@ -124,4 +138,5 @@ def test_phase1_ambiguous_login_button():
         traceback.print_exc()
 
 if __name__ == "__main__":
-    test_phase1_ambiguous_login_button()
+    asyncio.run(test_phase2_depth_sequence())
+

@@ -124,7 +124,8 @@ class ElementExtractor:
                         'textarea', 
                         'select',
                         'h1',
-                        'h2'
+                        'h2',
+                        'nav'
                     ];
 
                     // 1. Interactive Elements & Headings Extraction
@@ -247,7 +248,9 @@ class ElementExtractor:
                         '[role="status"]', 
                         '.spinner', '.loader', '.loading', '.progress', 
                         'svg[class*="spinner"]', 'svg[class*="loader"]',
-                        '[aria-busy="true"]'
+                        '[aria-busy="true"]',
+                        '[id*="spinner"]', '[id*="loader"]', '[id*="loading"]',
+                        '[class*="spinner"]', '[class*="loader"]', '[class*="loading"]'
                     ];
                     
                     document.querySelectorAll(progSelectors.join(',')).forEach(el => {

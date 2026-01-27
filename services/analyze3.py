@@ -95,6 +95,18 @@ def main():
                 prev_data["status_components"] = extraction_result.get("status_components", {})
                 print(f"  - Cleaned up {len(prev_data['elements'])} extracted elements.")
             
+            # Print detected progress indicators
+            status_comps = prev_data.get("status_components", {})
+            indicators = status_comps.get("progress_indicators", [])
+            if indicators:
+                print(f"\n[Detected Progress Indicators]")
+                for idx, ind in enumerate(indicators):
+                    rect = ind.get('rect', {})
+                    rect_str = f"w={rect.get('width',0):.1f}, h={rect.get('height',0):.1f}"
+                    print(f"  {idx+1}. Type: {ind.get('type')}, Text: {ind.get('text')}, Rect: [{rect_str}], Container: {ind.get('container')}")
+            else:
+                print("\n[Detected Progress Indicators]\n  None")
+
             results = evaluate_after_action(edge_data, prev_data, next_data)
             
             print("\n[Efficiency Result]")
@@ -104,15 +116,7 @@ def main():
             print(f"  - Status:  {lat.get('status')}")
             print(f"  - Desc:    {lat.get('description')}")
             
-            print("\n[Control Result]")
-            ctrl = results.get("control", {})
-            fb = ctrl.get("immediate_feedback", {})
-            print(f"  - Feedback Status: {fb.get('status')}")
-            print(f"  - Description:     {fb.get('description')}")
-            
-            vis = ctrl.get("visibility_of_status", {})
-            print(f"  - Context:         {vis.get('description')}")
-            
+
         except ImportError as e:
             print(f"[ERROR] Could not import evaluator: {e}")
         except Exception as e:

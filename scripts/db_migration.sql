@@ -88,3 +88,19 @@ CREATE INDEX IF NOT EXISTS idx_edges_depth_diff_type ON edges(depth_diff_type);
 CREATE INDEX IF NOT EXISTS idx_nodes_route_depth ON nodes(route_depth);
 CREATE INDEX IF NOT EXISTS idx_nodes_modal_depth ON nodes(modal_depth);
 CREATE INDEX IF NOT EXISTS idx_nodes_interaction_depth ON nodes(interaction_depth);
+
+-- 8) pending_actions table
+CREATE TABLE IF NOT EXISTS pending_actions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    run_id UUID NOT NULL REFERENCES runs(id) ON DELETE CASCADE,
+    from_node_id UUID NOT NULL REFERENCES nodes(id) ON DELETE CASCADE,
+    action_type VARCHAR(20) NOT NULL CHECK (action_type IN ('click', 'fill', 'navigate', 'scroll', 'keyboard', 'wait', 'hover')),
+    action_target TEXT NOT NULL,
+    action_value TEXT DEFAULT '',
+    status VARCHAR(20) NOT NULL DEFAULT 'pending',
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_pending_actions_run ON pending_actions(run_id);
+CREATE INDEX IF NOT EXISTS idx_pending_actions_from_node ON pending_actions(from_node_id);
+CREATE INDEX IF NOT EXISTS idx_pending_actions_status ON pending_actions(status);

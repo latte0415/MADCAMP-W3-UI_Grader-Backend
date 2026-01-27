@@ -127,6 +127,47 @@ CREATE INDEX idx_edges_cost ON edges(cost);
 - `intent_label`: LLM이 파악한 액션 의도 (Clarity & Affordance 평가)
 - `*_ref`: 원본 데이터는 파일로 저장하고 경로만 참조
 
+## run_memory 테이블
+런 단위 자연어 메모리를 저장합니다. AI filter-action, update-run-memory 등에서 사용합니다.
+
+```sql
+CREATE TABLE IF NOT EXISTS run_memory (
+    run_id UUID PRIMARY KEY REFERENCES runs(id) ON DELETE CASCADE,
+    content JSONB NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_run_memory_content ON run_memory USING GIN (content);
+```
+
+- `run_id`: 탐색 세션 ID (PK)
+- `content`: JSONB 메모리 (예: `{"login_page": "로그인 페이지 설명", "생성한 ID": "예시"}`)
+
+## pending_actions 테이블
+입력값 부족 등으로 당장 처리할 수 없는 액션을 나중에 처리하기 위해 보관합니다.
+
+```sql
+CREATE TABLE IF NOT EXISTS pending_actions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    run_id UUID NOT NULL REFERENCES runs(id) ON DELETE CASCADE,
+    from_node_id UUID NOT NULL REFERENCES nodes(id) ON DELETE CASCADE,
+    action_type VARCHAR(20) NOT NULL CHECK (action_type IN ('click', 'fill', 'navigate', 'scroll', 'keyboard', 'wait', 'hover')),
+    action_target TEXT NOT NULL,
+    action_value TEXT DEFAULT '',
+    status VARCHAR(20) NOT NULL DEFAULT 'pending',
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_pending_actions_run ON pending_actions(run_id);
+CREATE INDEX IF NOT EXISTS idx_pending_actions_from_node ON pending_actions(from_node_id);
+CREATE INDEX IF NOT EXISTS idx_pending_actions_status ON pending_actions(status);
+```
+
+- `run_id`, `from_node_id`: 탐색 세션 및 시작 노드
+- `action_type`, `action_target`, `action_value`: 액션 정보
+- `status`: `pending` 등
+
 ## 사용 예시
 
 ### 특정 화면(상태)에서 가능한 액션 조회

@@ -1,9 +1,9 @@
 """웹페이지 상태 수집 유틸리티"""
 from typing import Dict, List, Optional
-from playwright.sync_api import Page
+from playwright.async_api import Page
 
 
-def collect_storage_state(page: Page) -> Dict[str, Dict]:
+async def collect_storage_state(page: Page) -> Dict[str, Dict]:
     """
     localStorage와 sessionStorage 상태 수집
     
@@ -13,8 +13,8 @@ def collect_storage_state(page: Page) -> Dict[str, Dict]:
     Returns:
         {"localStorage": {...}, "sessionStorage": {...}} 딕셔너리
     """
-    local_storage = page.evaluate("() => ({ ...localStorage })")
-    session_storage = page.evaluate("() => ({ ...sessionStorage })")
+    local_storage = await page.evaluate("() => ({ ...localStorage })")
+    session_storage = await page.evaluate("() => ({ ...sessionStorage })")
     
     return {
         "localStorage": local_storage or {},
@@ -67,7 +67,7 @@ def infer_auth_state(storage_state: Dict[str, Dict]) -> Dict:
     return auth_state
 
 
-def collect_a11y_info(page: Page) -> List[str]:
+async def collect_a11y_info(page: Page) -> List[str]:
     """
     접근성 정보 수집
     
@@ -80,15 +80,31 @@ def collect_a11y_info(page: Page) -> List[str]:
     a11y_info = []
     
     # ARIA 속성, 역할, 이름 등 접근성 정보 수집
-    elements = page.query_selector_all("[role], [aria-label], [aria-labelledby], button, a, input, select, textarea")
+    elements = await page.query_selector_all("[role], [aria-label], [aria-labelledby], button, a, input, select, textarea")
     
     for element in elements:
         try:
-            role = element.get_attribute("role") or ""
-            label = element.get_attribute("aria-label") or ""
-            labelledby = element.get_attribute("aria-labelledby") or ""
-            tag = (element.evaluate("el => el.tagName") or "").lower()
-            input_type = element.get_attribute("type") or ""
+            role = await element.get_attribute("role") or ""
+            label = await element.get_attribute("aria-label") or ""
+            labelledby = await element.get_attribute("aria-labelledby") or ""
+            tag = (await element.evaluate("el => el.tagName") or "").lower()
+            input_type = await element.get_attribute("type") or ""
+            
+            # role이 없으면 태그와 타입을 기반으로 추론
+            if not role:
+                if tag == "a":
+                    role = "link"
+                elif tag == "button":
+                    role = "button"
+                elif tag == "input":
+                    if input_type in ("submit", "button"):
+                        role = "button"
+                    else:
+                        role = "textbox"
+                elif tag == "select":
+                    role = "combobox"
+                elif tag == "textarea":
+                    role = "textbox"
             aria_parts = []
             for key in [
                 "aria-hidden",
@@ -106,23 +122,29 @@ def collect_a11y_info(page: Page) -> List[str]:
                 "aria-haspopup",
                 "aria-controls"
             ]:
-                value = element.get_attribute(key)
+                value = await element.get_attribute(key)
                 if value is not None:
                     aria_parts.append(f"{key}={value}")
             aria_summary = ",".join(aria_parts)
             
             # 텍스트 콘텐츠 가져오기 (처음 50자만)
+            # 입력 필드(input, textarea)는 inner_text() 대신 value 속성 사용
             try:
-                name = element.inner_text().strip()[:50]
+                if tag in ("input", "textarea"):
+                    # 입력 필드는 value 속성 사용 (inner_text()는 빈 문자열일 수 있음)
+                    name = (await element.evaluate("el => el.value || ''"))[:50]
+                else:
+                    # 다른 요소는 inner_text() 사용
+                    name = (await element.inner_text()).strip()[:50]
             except:
                 name = ""
             
             # labelledby가 있으면 해당 요소의 텍스트도 가져오기
             if labelledby:
                 try:
-                    labelled_element = page.query_selector(f"#{labelledby}")
+                    labelled_element = await page.query_selector(f"#{labelledby}")
                     if labelled_element:
-                        name = labelled_element.inner_text().strip()[:50]
+                        name = (await labelled_element.inner_text()).strip()[:50]
                 except:
                     pass
             
@@ -136,7 +158,72 @@ def collect_a11y_info(page: Page) -> List[str]:
     return a11y_info
 
 
-def collect_content_elements(page: Page) -> List[str]:
+async def collect_input_values(page: Page) -> Dict[str, str]:
+    """
+    입력 필드의 값들을 수집합니다.
+    
+    Args:
+        page: Playwright Page 객체
+    
+    Returns:
+        입력 필드 값 딕셔너리 {key: value}
+        key는 action_extractor와 동일한 방식으로 생성된 action_target 형식
+    """
+    from utils.action_extractor import _get_role, _get_name, _build_selector
+    
+    input_values = {}
+    
+    # input, textarea, select 요소 수집
+    input_selectors = ["input", "textarea", "select"]
+    
+    for selector in input_selectors:
+        try:
+            elements = await page.query_selector_all(selector)
+            for element in elements:
+                try:
+                    # 요소가 visible한지 확인
+                    if not await element.is_visible():
+                        continue
+                    
+                    # input type 확인
+                    input_type = await element.get_attribute("type") or "text"
+                    tag = (await element.evaluate("el => el.tagName") or "").lower()
+                    
+                    # 값 가져오기
+                    value = await element.evaluate("el => el.value")
+                    
+                    # 빈 값은 스킵
+                    if not value:
+                        continue
+                    
+                    # action_extractor와 동일한 방식으로 role, name, selector 추출
+                    role = (await _get_role(element)) or ""
+                    name = await _get_name(element)
+                    selector_str = await _build_selector(element)
+                    
+                    # action_target 형식으로 key 생성 (action_extractor의 _make_action과 동일)
+                    action_target = f"role={role} name={name}".strip()
+                    if not role and not name:
+                        action_target = selector_str
+                    
+                    # password 타입은 해시만 저장
+                    if input_type == "password":
+                        import hashlib
+                        value_hash = hashlib.sha256(value.encode()).hexdigest()[:16]
+                        input_values[action_target] = f"<hashed:{value_hash}>"
+                    else:
+                        input_values[action_target] = value[:200]  # 최대 200자만
+                        
+                except Exception:
+                    # 요소 접근 실패 시 스킵
+                    continue
+        except Exception:
+            continue
+    
+    return input_values
+
+
+async def collect_content_elements(page: Page) -> List[str]:
     """
     콘텐츠 요소 수집 (텍스트 콘텐츠 중심)
     
@@ -156,10 +243,10 @@ def collect_content_elements(page: Page) -> List[str]:
     
     for selector in selectors:
         try:
-            elements = page.query_selector_all(selector)
+            elements = await page.query_selector_all(selector)
             for element in elements[:10]:  # 각 타입당 최대 10개만
                 try:
-                    text = element.inner_text().strip()
+                    text = (await element.inner_text()).strip()
                     if text and len(text) > 5:  # 최소 5자 이상
                         content_elements.append(f"{selector}:{text[:100]}")  # 처음 100자만
                 except:
@@ -170,7 +257,7 @@ def collect_content_elements(page: Page) -> List[str]:
     return content_elements
 
 
-def collect_page_state(page: Page) -> Dict:
+async def collect_page_state(page: Page) -> Dict:
     """
     웹페이지 상태 수집
     
@@ -184,21 +271,25 @@ def collect_page_state(page: Page) -> Dict:
     url = page.url
     
     # 스토리지 상태 수집
-    storage_state = collect_storage_state(page)
+    storage_state = await collect_storage_state(page)
     
     # 인증 상태 추론
     auth_state = infer_auth_state(storage_state)
     
     # 접근성 정보 수집
-    a11y_info = collect_a11y_info(page)
+    a11y_info = await collect_a11y_info(page)
     
     # 콘텐츠 요소 수집 (선택적)
-    content_elements = collect_content_elements(page)
+    content_elements = await collect_content_elements(page)
+    
+    # 입력 필드 값 수집
+    input_values = await collect_input_values(page)
     
     return {
         "url": url,
         "storage_state": storage_state,
         "auth_state": auth_state,
         "a11y_info": a11y_info,
-        "content_elements": content_elements
+        "content_elements": content_elements,
+        "input_values": input_values
     }
