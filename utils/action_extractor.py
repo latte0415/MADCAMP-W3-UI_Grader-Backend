@@ -109,6 +109,7 @@ async def _make_action(action_type: str, element: ElementHandle, action_value: O
 async def _is_element_interactable(element: ElementHandle) -> bool:
     """
     요소가 실제로 상호작용 가능한지 확인
+    코드에 내장되어 있지만 화면에 보이지 않는 요소는 제외합니다.
     
     Returns:
         True if element is visible, enabled, and interactable
@@ -120,8 +121,59 @@ async def _is_element_interactable(element: ElementHandle) -> bool:
         if not is_connected:
             return False
         
-        # 요소가 보이는지 확인
+        # 요소가 보이는지 확인 (Playwright의 기본 체크)
         if not await element.is_visible():
+            return False
+        
+        # 추가 가시성 체크: JavaScript로 더 정확한 가시성 검증
+        visibility_check = await element.evaluate("""el => {
+            // 1. 요소의 bounding box 확인
+            const rect = el.getBoundingClientRect();
+            if (rect.width === 0 || rect.height === 0) {
+                return false;
+            }
+            
+            // 2. 요소가 뷰포트 밖으로 완전히 벗어났는지 확인
+            const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
+            const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+            
+            // 요소가 뷰포트와 겹치는지 확인
+            if (rect.right < 0 || rect.bottom < 0 || rect.left > viewportWidth || rect.top > viewportHeight) {
+                return false;
+            }
+            
+            // 3. CSS 스타일로 인해 숨겨져 있는지 확인
+            const style = window.getComputedStyle(el);
+            
+            // display: none 체크
+            if (style.display === 'none') {
+                return false;
+            }
+            
+            // visibility: hidden 체크
+            if (style.visibility === 'hidden') {
+                return false;
+            }
+            
+            // opacity: 0 체크 (완전히 투명한 경우)
+            if (parseFloat(style.opacity) === 0) {
+                return false;
+            }
+            
+            // 4. 부모 요소들이 모두 보이는지 확인
+            let parent = el.parentElement;
+            while (parent && parent !== document.body) {
+                const parentStyle = window.getComputedStyle(parent);
+                if (parentStyle.display === 'none' || parentStyle.visibility === 'hidden') {
+                    return false;
+                }
+                parent = parent.parentElement;
+            }
+            
+            return true;
+        }""")
+        
+        if not visibility_check:
             return False
         
         # Playwright의 is_enabled() 메서드 사용 (가장 정확함)
