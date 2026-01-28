@@ -1,4 +1,5 @@
 """FastAPI 앱 엔트리포인트. health check 엔드포인트 제공."""
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -34,10 +35,48 @@ def start_periodic_completion_check():
     except Exception as e:
         logger.error(f"주기적 완료 체크 워커 시작 실패: {e}", exc_info=True)
 
-# CORS 설정 (모든 origin 허용)
+# CORS 설정
+# 환경에 따라 허용할 origin 목록 결정
+def get_allowed_origins():
+    """
+    환경에 따라 허용할 CORS origin 목록을 반환합니다.
+    
+    - 모니터링 서버는 항상 허용
+    - 로컬 환경: localhost:3000과 웹 서버 허용
+    - 배포 환경: 웹 서버만 허용
+    """
+    # 항상 허용할 origin (모니터링 서버)
+    allowed_origins = [
+        "https://madcamp-w3-ui-grader-monitoring.vercel.app",
+    ]
+    
+    # 웹 서버 origin
+    web_origin = "https://madcamp-w3-ui-grader-web.vercel.app"
+    
+    # 환경 확인: Railway 환경인지 또는 ENVIRONMENT 환경 변수 확인
+    is_production = (
+        os.getenv("RAILWAY_ENVIRONMENT") is not None
+        or os.getenv("ENVIRONMENT", "").lower() == "production"
+        or os.getenv("ENV", "").lower() == "production"
+    )
+    
+    if is_production:
+        # 배포 환경: 웹 서버만 허용
+        allowed_origins.append(web_origin)
+        logger.info("CORS 설정: 배포 환경 - 웹 서버와 모니터링 서버만 허용")
+    else:
+        # 로컬 환경: localhost:3000과 웹 서버 허용
+        allowed_origins.extend([
+            "http://localhost:3000",
+            web_origin,
+        ])
+        logger.info("CORS 설정: 로컬 환경 - localhost:3000, 웹 서버, 모니터링 서버 허용")
+    
+    return allowed_origins
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # 모든 origin 허용
+    allow_origins=get_allowed_origins(),
     allow_credentials=True,
     allow_methods=["*"],  # 모든 HTTP 메서드 허용
     allow_headers=["*"],  # 모든 헤더 허용

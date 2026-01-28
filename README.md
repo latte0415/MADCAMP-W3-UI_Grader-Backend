@@ -20,8 +20,19 @@
 | `REDIS_URL` | Redis 연결 URL (기본값: `redis://localhost:6379/0`) |
 | `LANGCHAIN_TRACING` | LangSmith 트레이싱 사용 여부 (`true` / `false`) |
 | `LANGCHAIN_API_KEY` | LangSmith API 키 (트레이싱 사용 시) |
+| `ENVIRONMENT` | 환경 설정 (`production`으로 설정 시 배포 환경으로 인식) |
 
 `.env`에 설정하거나 `python-dotenv`로 로드합니다.
+
+## CORS 설정
+
+CORS는 환경에 따라 자동으로 설정됩니다:
+
+- **모니터링 서버**: 항상 허용 (`https://madcamp-w3-ui-grader-monitoring.vercel.app`)
+- **로컬 환경**: `localhost:3000`과 웹 서버 허용
+- **배포 환경**: 웹 서버만 허용 (`https://madcamp-w3-ui-grader-web.vercel.app`)
+
+환경 감지는 `RAILWAY_ENVIRONMENT`, `ENVIRONMENT`, 또는 `ENV` 환경 변수를 통해 자동으로 수행됩니다.
 
 ## 설치·실행
 
@@ -56,3 +67,4 @@ pip install -r requirements.txt
 - [docs/policy.md](docs/policy.md) — 그래프 정책 (노드/엣지 정의, 동치 기준)
 - [docs/todo.md](docs/todo.md) — 구현 현황
 - [docs/scripts.md](docs/scripts.md) — SQL 스크립트 실행 순서·용도
+- [docs/railway_deployment.md](docs/railway_deployment.md) — Railway 배포 가이드 (API 서버 + 워커)
