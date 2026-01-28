@@ -2,7 +2,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from routers import monitor, evaluation, runs
+from routers import monitor, evaluation, runs, nodes
 from middleware.exception_handler import register_exception_handlers
 from utils.logger import setup_logging, get_logger
 from utils.worker_manager import start_worker_background
@@ -50,6 +50,7 @@ register_exception_handlers(app)
 app.include_router(monitor.router)
 app.include_router(evaluation.router)
 app.include_router(runs.router)
+app.include_router(nodes.router)
 
 
 @app.get("/")

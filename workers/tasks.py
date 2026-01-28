@@ -221,9 +221,24 @@ def periodic_completion_check_worker():
         for run in running_runs:
             run_id = str(run["id"])
             check_graph_completion_worker.send(run_id)
+        
+        # 다음 주기적 체크 예약
+        logger.debug(f"다음 주기적 체크 예약: {CHECK_INTERVAL_SECONDS}초 후")
+        periodic_completion_check_worker.send_with_options(
+            args=(),
+            delay=CHECK_INTERVAL_SECONDS * 1000
+        )
             
     except Exception as e:
         logger.error(f"정기적 그래프 완료 체크 중 에러: {e}", exc_info=True)
+        # 에러 발생 시에도 다음 체크 예약 (워커가 계속 실행되도록)
+        try:
+            periodic_completion_check_worker.send_with_options(
+                args=(),
+                delay=CHECK_INTERVAL_SECONDS * 1000
+            )
+        except Exception as reschedule_error:
+            logger.error(f"재스케줄링 실패: {reschedule_error}", exc_info=True)
     finally:
         clear_context()
 

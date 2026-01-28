@@ -8,7 +8,7 @@ def evaluate_doing_actions(chain_data: List[Dict[str, Any]]) -> Dict[str, Any]:
     print(f"\n[{__file__}] {len(chain_data)} 단계에 대한 효율성 평가 중...")
     
     results = {
-        "learnability": {"score": 100.0, "passed": [], "failed": []},
+        "learnability": {"score": 0.0, "passed": [], "failed": []},
         "efficiency": {
             "score": 0, 
             "passed": [], 
@@ -22,7 +22,7 @@ def evaluate_doing_actions(chain_data: List[Dict[str, Any]]) -> Dict[str, Any]:
                 "fitts_issues": []
             }
         },
-        "control": {"score": 100.0, "passed": [], "failed": []}
+        "control": {"score": 0.0, "passed": [], "failed": []}
     }
 
     # KLM 연산자 (초 단위 근사값)
@@ -142,6 +142,31 @@ def evaluate_doing_actions(chain_data: List[Dict[str, Any]]) -> Dict[str, Any]:
             pass
 
     results["efficiency"]["interaction_efficiency"]["total_estimated_time_s"] = round(total_klm_time, 2)
+
+    # 3. Fitts & Size 평가 반영
+    size_issues = results["efficiency"]["target_size_spacing"]["size_issues"]
+    if size_issues:
+        results["efficiency"]["failed"].append({
+            "check": "Target Size Compliance",
+            "message": f"{len(size_issues)}개의 요소가 권장 크기(32px)보다 작습니다."
+        })
+    else:
+        results["efficiency"]["passed"].append({
+            "check": "Target Size Compliance",
+            "message": "모든 상호작용 요소가 적절한 크기를 가집니다."
+        })
+
+    fitts_issues = results["efficiency"]["target_size_spacing"]["fitts_issues"]
+    if fitts_issues:
+        results["efficiency"]["failed"].append({
+            "check": "Fitts's Law Optimization",
+            "message": f"{len(fitts_issues)}개의 동작이 높은 난이도 지수(ID > 3.0)를 가집니다."
+        })
+    else:
+        results["efficiency"]["passed"].append({
+            "check": "Fitts's Law Optimization",
+            "message": "요소 배치가 효율적입니다(낮은 Fitts ID)."
+        })
 
     # KLM 총합 평가
     total_klm_time = round(total_klm_time, 2)
