@@ -13,6 +13,7 @@ from repositories.site_evaluation_repository import (
     create_workflow_evaluation,
     get_evaluations_by_user_id
 )
+from repositories.ai_memory_repository import create_run_memory
 from services.site_evaluation_service import SiteEvaluationService
 from services.graph_builder_service import start_graph_building
 from services.analysis_service import AnalysisService
@@ -29,12 +30,14 @@ class AnalyzeRequest(BaseModel):
     url: str = Field(..., description="분석할 대상 URL")
     start_url: Optional[str] = Field(None, description="시작 URL (기본값: url과 동일)")
     metadata: Optional[Dict[str, Any]] = Field(None, description="추가 메타데이터")
+    run_memory_preset: Optional[Dict[str, Any]] = Field(None, description="run_memory에 사전 삽입할 값 (dict 형식)")
 
 
 class FullAnalysisRequest(BaseModel):
     """전체 분석 요청 모델"""
     url: str = Field(..., description="분석할 대상 URL")
     user_id: str = Field(..., description="사용자 ID")
+    run_memory_preset: Optional[Dict[str, Any]] = Field(None, description="run_memory에 사전 삽입할 값 (dict 형식)")
 
 
 @router.get("/list")
@@ -228,6 +231,14 @@ async def analyze_url(
         
         run = create_run(run_data)
         run_id = UUID(run["id"])
+        
+        # run_memory_preset이 있으면 run_memory에 사전 삽입
+        if request.run_memory_preset:
+            try:
+                create_run_memory(run_id, request.run_memory_preset)
+                logger.info(f"run_memory 프리세팅 완료: run_id={run_id}, preset_keys={list(request.run_memory_preset.keys())}")
+            except Exception as e:
+                logger.warning(f"run_memory 프리세팅 실패 (계속 진행): {e}", exc_info=True)
         
         # 그래프 구축 시작 (비동기)
         try:
@@ -434,6 +445,14 @@ async def run_full_analysis_api(request: FullAnalysisRequest) -> Dict[str, Any]:
         
         run = create_run(run_data)
         run_id = UUID(run["id"])
+        
+        # run_memory_preset이 있으면 run_memory에 사전 삽입
+        if request.run_memory_preset:
+            try:
+                create_run_memory(run_id, request.run_memory_preset)
+                logger.info(f"run_memory 프리세팅 완료: run_id={run_id}, preset_keys={list(request.run_memory_preset.keys())}")
+            except Exception as e:
+                logger.warning(f"run_memory 프리세팅 실패 (계속 진행): {e}", exc_info=True)
         
         logger.info(f"전체 분석 시작: run_id={run_id}, url={request.url}, user_id={request.user_id}")
         

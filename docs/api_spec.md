@@ -518,9 +518,23 @@ Run 모니터링 데이터를 조회합니다.
   "start_url": "string (optional, 기본값: url과 동일)",
   "metadata": {
     "key": "value"
+  },
+  "run_memory_preset": {
+    "key1": "value1",
+    "key2": "value2",
+    "custom_data": {
+      "nested": "data"
+    }
   }
 }
 ```
+
+#### 요청 필드 설명
+
+- `url` (required): 분석할 대상 URL
+- `start_url` (optional): 시작 URL (기본값: url과 동일)
+- `metadata` (optional): 추가 메타데이터 (dict 형식)
+- `run_memory_preset` (optional): run_memory에 사전 삽입할 값 (dict 형식). 제공되면 run 생성 직후 해당 run_id의 run_memory에 삽입됩니다.
 
 #### 응답 형식
 
@@ -561,6 +575,7 @@ Run 모니터링 데이터를 조회합니다.
 - 분석은 비동기로 실행되며, 완료까지 시간이 걸릴 수 있습니다.
 - 분석 진행 상황은 `/api/runs/{run_id}/monitor` 엔드포인트로 확인할 수 있습니다.
 - 분석이 완료되면 `/api/evaluation/{run_id}` 엔드포인트로 결과를 조회할 수 있습니다.
+- `run_memory_preset`이 제공되면 run 생성 직후 해당 run_id의 run_memory에 사전 삽입됩니다. 프리세팅 실패 시에도 분석은 계속 진행됩니다.
 
 ### 9. `GET /api/evaluation/{run_id}`
 
@@ -712,9 +727,22 @@ Run 모니터링 데이터를 조회합니다.
 ```json
 {
   "url": "string (required)",
-  "user_id": "string (required)"
+  "user_id": "string (required)",
+  "run_memory_preset": {
+    "key1": "value1",
+    "key2": "value2",
+    "custom_data": {
+      "nested": "data"
+    }
+  }
 }
 ```
+
+#### 요청 필드 설명
+
+- `url` (required): 분석할 대상 URL
+- `user_id` (required): 사용자 ID
+- `run_memory_preset` (optional): run_memory에 사전 삽입할 값 (dict 형식). 제공되면 run 생성 직후 해당 run_id의 run_memory에 삽입됩니다.
 
 #### 응답 형식
 
@@ -748,6 +776,7 @@ Run 모니터링 데이터를 조회합니다.
 - 분석이 완료되면 `/api/evaluation/{run_id}` 엔드포인트로 결과를 조회할 수 있습니다.
 - 분석 실패 시 run 상태가 `failed`로 업데이트됩니다.
 - `user_id`는 run의 `metadata`에 저장됩니다.
+- `run_memory_preset`이 제공되면 run 생성 직후 해당 run_id의 run_memory에 사전 삽입됩니다. 프리세팅 실패 시에도 분석은 계속 진행됩니다.
 
 #### 분석 결과 저장 구조
 
