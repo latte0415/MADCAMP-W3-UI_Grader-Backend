@@ -39,7 +39,9 @@
 3. 서비스 이름: `api` (또는 원하는 이름)
 4. Root Directory: `/` (기본값)
 5. Build Command: (Dockerfile 사용 시 자동)
-6. Start Command: `uvicorn main:app --host 0.0.0.0 --port $PORT`
+6. Start Command: `sh -c 'uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}'`
+
+**참고**: Railway에서 환경 변수를 사용하려면 쉘(`sh -c`)을 통해 실행해야 합니다. `$PORT`를 직접 사용하면 문자열로 전달될 수 있습니다.
 
 **환경 변수 설정:**
 API 서비스의 "Variables" 탭에서 다음 변수들을 설정합니다:
@@ -72,8 +74,15 @@ API 서비스의 "Variables" 탭에서 다음 변수들을 설정합니다:
 - 워커 서비스는 API 서비스와 **같은 저장소**를 사용하지만 **별도의 서비스**입니다
 - 워커 서비스는 포트를 노출할 필요가 없으므로 "Generate Domain"을 하지 않아도 됩니다
 - 워커 서비스는 백그라운드에서 계속 실행되어야 하므로 항상 실행 상태를 유지합니다
-- **Start Command를 반드시 설정해야 합니다**: Railway 대시보드 → Worker 서비스 → Settings → Deploy → Start Command에 `python -m workers.worker` 입력
+- **Start Command를 반드시 설정해야 합니다**: 
+  - Railway 대시보드 → Worker 서비스 → Settings → Deploy → Start Command
+  - `python -m workers.worker` 입력
 - Start Command를 설정하지 않으면 Dockerfile의 기본 CMD(`uvicorn`)가 실행되어 오류가 발생합니다
+
+**API 서비스 Start Command 설정:**
+- Railway 대시보드 → API 서비스 → Settings → Deploy → Start Command
+- `sh -c 'uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}'` 입력
+- 또는 `railway.json` 파일이 있으면 자동으로 적용됩니다
 
 **환경 변수 설정:**
 워커 서비스의 "Variables" 탭에서 다음 변수들을 설정합니다:
@@ -197,12 +206,22 @@ API 서비스의 "Variables" 탭에서 다음 변수들을 설정합니다:
 1. 각 서비스의 "Variables" 탭에서 필수 환경 변수 확인
 2. 프로젝트 레벨 변수 사용 시 서비스에서 "Use Project Variable" 선택 확인
 
-### 문제: 포트 바인딩 오류
+### 문제: 포트 바인딩 오류 또는 "$PORT is not a valid integer" 오류
+
+**원인:**
+- Railway에서 `$PORT`를 직접 사용하면 문자열로 전달될 수 있습니다
+- 환경 변수 확장이 제대로 되지 않음
 
 **해결책:**
-- Railway는 `PORT` 환경 변수를 자동으로 제공합니다
-- Start Command에서 `$PORT` 사용 확인
-- Dockerfile의 EXPOSE 포트는 Railway가 자동으로 처리합니다
+1. Start Command에서 쉘을 사용하여 환경 변수 확장:
+   ```bash
+   sh -c 'uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}'
+   ```
+2. 또는 Railway 대시보드에서 Start Command를 수정:
+   - Settings → Deploy → Start Command
+   - `sh -c 'uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}'` 입력
+3. Railway는 `PORT` 환경 변수를 자동으로 제공하므로, 쉘을 통해 확장해야 합니다
+4. Dockerfile의 EXPOSE 포트는 Railway가 자동으로 처리합니다
 
 ### 문제: 빌드 실패
 
