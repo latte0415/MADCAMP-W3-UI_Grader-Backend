@@ -2,7 +2,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from routers import monitor
+from routers import monitor, evaluation, runs
 from middleware.exception_handler import register_exception_handlers
 from utils.logger import setup_logging
 
@@ -11,13 +11,13 @@ setup_logging("INFO")
 
 app = FastAPI()
 
-# CORS 설정 (Frontend에서 API 호출을 위해)
+# CORS 설정 (모든 origin 허용)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # 프로덕션에서는 특정 origin만 허용하도록 변경
+    allow_origins=["*"],  # 모든 origin 허용
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["*"],  # 모든 HTTP 메서드 허용
+    allow_headers=["*"],  # 모든 헤더 허용
 )
 
 # 예외 핸들러 등록
@@ -25,6 +25,8 @@ register_exception_handlers(app)
 
 # 라우터 등록
 app.include_router(monitor.router)
+app.include_router(evaluation.router)
+app.include_router(runs.router)
 
 
 @app.get("/")

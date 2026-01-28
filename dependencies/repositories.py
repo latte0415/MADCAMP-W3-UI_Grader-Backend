@@ -4,17 +4,19 @@
 from repositories import ai_memory_repository
 from repositories import edge_repository
 from repositories import node_repository
+from repositories import site_evaluation_repository
 
 
 class Repositories:
     """Repository 인스턴스 컨테이너"""
 
     def __init__(self):
-        """ai_memory, edge, node 리포지토리 모듈 참조 저장 (함수 기반)."""
+        """ai_memory, edge, node, site_evaluation 리포지토리 모듈 참조 저장 (함수 기반)."""
         # Repository는 함수 기반이므로 모듈 자체를 참조
         self.ai_memory = ai_memory_repository
         self.edge = edge_repository
         self.node = node_repository
+        self.site_evaluation = site_evaluation_repository
 
 
 # 싱글톤 인스턴스
