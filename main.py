@@ -57,6 +57,15 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+# 요청 로깅 미들웨어 (라우터 등록 전에 먼저 등록)
+@app.middleware("http")
+async def log_requests(request, call_next):
+    """모든 요청을 로깅합니다."""
+    logger.info(f"[요청] {request.method} {request.url.path} (query: {request.url.query})")
+    response = await call_next(request)
+    logger.info(f"[응답] {request.method} {request.url.path} - {response.status_code}")
+    return response
+
 # CORS 설정
 # 환경에 따라 허용할 origin 목록 결정
 def get_allowed_origins():
@@ -108,10 +117,26 @@ app.add_middleware(
 register_exception_handlers(app)
 
 # 라우터 등록
+logger.info("=" * 60)
+logger.info("라우터 등록 시작...")
 app.include_router(monitor.router)
+logger.info("✓ monitor 라우터 등록 완료")
 app.include_router(evaluation.router)
+logger.info("✓ evaluation 라우터 등록 완료")
 app.include_router(runs.router)
+logger.info("✓ runs 라우터 등록 완료")
 app.include_router(nodes.router)
+logger.info("✓ nodes 라우터 등록 완료")
+
+# 등록된 라우트 로깅 (디버깅용)
+logger.info("=" * 60)
+logger.info("등록된 모든 라우트:")
+for route in app.routes:
+    if hasattr(route, 'path'):
+        methods = list(route.methods) if hasattr(route, 'methods') else []
+        path = route.path
+        logger.info(f"  {methods} {path}")
+logger.info("=" * 60)
 
 
 @app.get("/")
