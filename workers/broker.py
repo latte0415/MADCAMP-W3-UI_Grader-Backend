@@ -24,6 +24,16 @@ load_dotenv()
 # 환경변수에서 Redis URL 가져오기 (기본값: 로컬 Redis)
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 
+# Redis URL 로깅 (디버깅용)
+from utils.logger import get_logger
+logger = get_logger(__name__)
+
+if REDIS_URL == "redis://localhost:6379/0":
+    logger.warning("⚠️  REDIS_URL 환경 변수가 설정되지 않았습니다. 기본값(localhost:6379)을 사용합니다.")
+    logger.warning("⚠️  Railway 배포 환경에서는 Redis 서비스의 REDIS_URL을 설정해야 합니다.")
+else:
+    logger.info(f"✓ Redis URL 설정됨: {REDIS_URL.split('@')[-1] if '@' in REDIS_URL else REDIS_URL}")
+
 # Redis 브로커 인스턴스 생성
 broker = RedisBroker(url=REDIS_URL)
 

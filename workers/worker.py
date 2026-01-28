@@ -26,6 +26,21 @@ logger.info("=" * 60)
 logger.info("워커 프로세스 시작")
 logger.info("=" * 60)
 
+# 환경 변수 확인 (디버깅용)
+redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+if redis_url == "redis://localhost:6379/0":
+    logger.error("=" * 60)
+    logger.error("❌ REDIS_URL 환경 변수가 설정되지 않았습니다!")
+    logger.error("❌ Railway 배포 환경에서는 Redis 서비스의 REDIS_URL을 설정해야 합니다.")
+    logger.error("=" * 60)
+else:
+    # 비밀번호가 포함된 경우 마스킹
+    masked_url = redis_url
+    if "@" in redis_url:
+        parts = redis_url.split("@")
+        masked_url = f"redis://***@{parts[-1]}"
+    logger.info(f"✓ REDIS_URL 설정됨: {masked_url}")
+
 # tasks 모듈을 import하여 actor들이 등록되도록 함
 from workers import tasks  # noqa: F401
 from workers import broker  # noqa: F401

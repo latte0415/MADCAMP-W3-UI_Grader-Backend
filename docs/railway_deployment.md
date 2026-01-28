@@ -84,6 +84,28 @@ API 서비스의 "Variables" 탭에서 다음 변수들을 설정합니다:
   - `python -m workers.worker` 입력
 - Start Command를 설정하지 않으면 Dockerfile의 기본 CMD(`uvicorn`)가 실행되어 오류가 발생합니다
 
+### 4-1. 워커 서비스 스케일링 (Replica 증가)
+
+처리 속도를 높이기 위해 워커 서비스의 replica 수를 늘릴 수 있습니다.
+
+**방법:**
+1. Railway 대시보드 → Worker 서비스 선택
+2. Settings → Scale 섹션으로 이동
+3. "Regions & Replicas" 섹션에서 Replica 수 증가 (예: 1 → 2 또는 3)
+4. 각 replica는 독립적인 워커 프로세스로 실행됩니다
+
+**주의사항:**
+- **모든 replica가 같은 Redis를 사용해야 합니다**: `REDIS_URL` 환경 변수가 모든 replica에서 동일해야 합니다
+- **리소스 사용량 증가**: 각 replica는 독립적으로 CPU와 메모리를 사용합니다
+- **비용 증가**: replica 수가 늘어나면 비용이 증가합니다
+- **권장 설정**: 
+  - 시작은 1개 replica로 테스트
+  - 필요에 따라 2-3개로 점진적으로 증가
+  - 각 replica당 충분한 메모리 할당 (Playwright 브라우저 사용 시 최소 2GB 권장)
+- **Replica Limits**: 각 replica의 CPU와 Memory 제한을 적절히 설정하세요
+  - CPU: 1-2 vCPU (처리 속도에 따라 조정)
+  - Memory: 2-4 GB (Playwright 브라우저 사용 시 충분한 메모리 필요)
+
 **API 서비스 Start Command 설정:**
 - Railway 대시보드 → API 서비스 → Settings → Deploy → Start Command
 - `sh -c 'uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}'` 입력
@@ -268,17 +290,32 @@ API 서비스의 "Variables" 탭에서 다음 변수들을 설정합니다:
 - `REDIS_URL` 환경 변수가 설정되지 않아 기본값(`localhost:6379`)을 사용하려고 함
 - Railway의 Redis 서비스 URL이 설정되지 않음
 
+**증상:**
+```
+[CRITICAL] Consumer encountered a connection error: Error 111 connecting to localhost:6379. Connection refused.
+```
+
 **해결책:**
 1. Railway 대시보드에서 Redis 서비스 선택
-2. "Variables" 탭에서 `REDIS_URL` 값을 복사
+2. "Variables" 탭에서 `REDIS_URL` 값을 복사 (예: `redis://default:password@redis.railway.internal:6379`)
 3. Worker 서비스 선택 → "Variables" 탭으로 이동
 4. `REDIS_URL` 변수를 추가하고 Redis 서비스의 URL을 붙여넣기
+   - 변수 이름: `REDIS_URL`
+   - 변수 값: Redis 서비스의 Variables에서 복사한 값
 5. API 서비스와 동일한 `REDIS_URL`을 사용하는지 확인
-6. 재배포 (환경 변수 변경 시 자동 재배포됨)
+6. 저장 후 자동 재배포되거나 수동으로 재배포
 
 **확인:**
-- Worker 서비스의 로그에서 Redis 연결 오류가 사라졌는지 확인
+- Worker 서비스의 로그에서 다음 메시지 확인:
+  - `✓ REDIS_URL 설정됨: redis://***@...` (정상)
+  - `❌ REDIS_URL 환경 변수가 설정되지 않았습니다!` (오류)
+- Redis 연결 오류가 사라졌는지 확인
 - "워커 프로세스 시작" 메시지와 "등록된 액터" 목록 확인
+
+**주의:**
+- `REDIS_URL`은 반드시 Worker 서비스에 설정해야 합니다
+- API 서비스와 Worker 서비스가 같은 Redis 인스턴스를 사용해야 합니다
+- Redis 서비스의 Variables에서 복사한 값을 그대로 사용하세요
 
 ### 문제: API 서비스에서 "on_event is deprecated" 경고
 

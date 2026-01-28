@@ -33,9 +33,15 @@ async def lifespan(app: FastAPI):
         from services.graph_completion_service import CHECK_INTERVAL_SECONDS
         
         # Redis 연결 확인 (연결 불가능하면 스킵)
+        # Railway 환경에서 빠른 시작을 위해 타임아웃을 짧게 설정
         import redis
         redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
-        test_redis = redis.from_url(redis_url, socket_connect_timeout=2)
+        test_redis = redis.from_url(
+            redis_url, 
+            socket_connect_timeout=0.5,  # 연결 타임아웃 0.5초로 단축
+            socket_timeout=0.5,  # 소켓 타임아웃 0.5초로 설정
+            retry_on_timeout=False  # 타임아웃 시 재시도 안 함
+        )
         test_redis.ping()
         test_redis.close()
         
@@ -47,6 +53,7 @@ async def lifespan(app: FastAPI):
         logger.info(f"주기적 완료 체크 워커 시작됨 (첫 체크: 10초 후, 이후 {CHECK_INTERVAL_SECONDS}초마다)")
     except Exception as e:
         # Redis 연결 실패 시 로그만 남기고 계속 진행 (워커 서비스에서는 정상)
+        # Railway 환경에서 Redis 연결이 느릴 수 있으므로 빠르게 스킵
         logger.debug(f"주기적 완료 체크 워커 시작 스킵 (Redis 연결 불가 또는 워커 서비스): {e}")
     
     yield
