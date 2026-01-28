@@ -1,0 +1,217 @@
+{
+  "run_id": "098c72ff-5105-4f8b-9fb9-5235dff90a5d",
+  "exported_at": "2026-01-28T06:33:46.324113Z",
+  "summary": {
+    "node_count": 3,
+    "edge_count": 5,
+    "success_edge_count": 2,
+    "fail_edge_count": 3
+  },
+  "nodes": [
+    {
+      "id": "2cb6fbf3-b1f7-4eab-82ba-6c96854d3f1d",
+      "run_id": "098c72ff-5105-4f8b-9fb9-5235dff90a5d",
+      "url": "https://testbedpage.vercel.app/",
+      "url_normalized": "https://testbedpage.vercel.app/",
+      "a11y_hash": "bf485ea586f2f7b6b7cbea89d36ae85c4d2f3464cd3156887701fcf07950041e",
+      "content_dom_hash": "beae93e0944fd2985f7df76b3151feab90b1a75fbeb772e139c290960845a286",
+      "state_hash": "0bb750b7c8d9a85ba49cc66c19621cea51312a951bf2c747a92de1edd2c3eee9",
+      "auth_state": {
+        "plan": null,
+        "tenant": null,
+        "has_token": false,
+        "user_role": null,
+        "is_logged_in": false
+      },
+      "storage_fingerprint": {
+        "local_keys": [],
+        "session_keys": [],
+        "hashed_values": {}
+      },
+      "dom_snapshot_ref": "ui-artifacts/runs/098c72ff-5105-4f8b-9fb9-5235dff90a5d/nodes/2cb6fbf3-b1f7-4eab-82ba-6c96854d3f1d/dom_snapshot.html",
+      "a11y_snapshot_ref": "ui-artifacts/runs/098c72ff-5105-4f8b-9fb9-5235dff90a5d/nodes/2cb6fbf3-b1f7-4eab-82ba-6c96854d3f1d/a11y_snapshot.json",
+      "screenshot_ref": "ui-artifacts/runs/098c72ff-5105-4f8b-9fb9-5235dff90a5d/nodes/2cb6fbf3-b1f7-4eab-82ba-6c96854d3f1d/screenshot.png",
+      "storage_ref": "ui-artifacts/runs/098c72ff-5105-4f8b-9fb9-5235dff90a5d/nodes/2cb6fbf3-b1f7-4eab-82ba-6c96854d3f1d/storage_state.json",
+      "created_at": "2026-01-28T06:30:21.789147+00:00",
+      "route_depth": 0,
+      "modal_depth": 0,
+      "interaction_depth": 0,
+      "css_snapshot_ref": "ui-artifacts/runs/098c72ff-5105-4f8b-9fb9-5235dff90a5d/nodes/2cb6fbf3-b1f7-4eab-82ba-6c96854d3f1d/styles.css",
+      "input_state_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "id": "b70dc5d6-f82a-4847-b0c6-49a823dd14de",
+      "run_id": "098c72ff-5105-4f8b-9fb9-5235dff90a5d",
+      "url": "https://testbedpage.vercel.app/phase1_analyze",
+      "url_normalized": "https://testbedpage.vercel.app/phase1_analyze",
+      "a11y_hash": "8643d311ce240ae13827f7a3fa4597085f517bc3ab86537f13627d518b210d6b",
+      "content_dom_hash": "d9d2dc60bf050396d0f095bda16dac7cf82567faa5bc31666976cddb738d4e49",
+      "state_hash": "0bb750b7c8d9a85ba49cc66c19621cea51312a951bf2c747a92de1edd2c3eee9",
+      "auth_state": {
+        "plan": null,
+        "tenant": null,
+        "has_token": false,
+        "user_role": null,
+        "is_logged_in": false
+      },
+      "storage_fingerprint": {
+        "local_keys": [],
+        "session_keys": [],
+        "hashed_values": {}
+      },
+      "dom_snapshot_ref": "ui-artifacts/runs/098c72ff-5105-4f8b-9fb9-5235dff90a5d/nodes/b70dc5d6-f82a-4847-b0c6-49a823dd14de/dom_snapshot.html",
+      "a11y_snapshot_ref": "ui-artifacts/runs/098c72ff-5105-4f8b-9fb9-5235dff90a5d/nodes/b70dc5d6-f82a-4847-b0c6-49a823dd14de/a11y_snapshot.json",
+      "screenshot_ref": "ui-artifacts/runs/098c72ff-5105-4f8b-9fb9-5235dff90a5d/nodes/b70dc5d6-f82a-4847-b0c6-49a823dd14de/screenshot.png",
+      "storage_ref": "ui-artifacts/runs/098c72ff-5105-4f8b-9fb9-5235dff90a5d/nodes/b70dc5d6-f82a-4847-b0c6-49a823dd14de/storage_state.json",
+      "created_at": "2026-01-28T06:31:25.774229+00:00",
+      "route_depth": 1,
+      "modal_depth": 0,
+      "interaction_depth": 0,
+      "css_snapshot_ref": "ui-artifacts/runs/098c72ff-5105-4f8b-9fb9-5235dff90a5d/nodes/b70dc5d6-f82a-4847-b0c6-49a823dd14de/styles.css",
+      "input_state_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "id": "07a9ffac-54ba-4326-a358-89480a27eb68",
+      "run_id": "098c72ff-5105-4f8b-9fb9-5235dff90a5d",
+      "url": "https://vercel.com/docs/errors/NOT_FOUND",
+      "url_normalized": "https://vercel.com/docs/errors/NOT_FOUND",
+      "a11y_hash": "5f05306f68e9b470cff9b2841914cb2f672d4b6fe74a00ce81fc9650141bc7c0",
+      "content_dom_hash": "d09ecd3e1754b766d8262a406b47a3c73c88a546007507e24e73b51ead0b6eb2",
+      "state_hash": "4fc52e661ce8af71c96ac9f945bbda5163225e4eedc66172b9604ad64ef39d70",
+      "auth_state": {
+        "plan": null,
+        "tenant": null,
+        "has_token": false,
+        "user_role": null,
+        "is_logged_in": false
+      },
+      "storage_fingerprint": {
+        "local_keys": [
+          "referrers",
+          "utmValues"
+        ],
+        "session_keys": [
+          "lpid",
+          "sid",
+          "srid",
+          "uval"
+        ],
+        "hashed_values": {
+          "session_sid": "15b93b96a25a46698c12c425ba2c8fa969593e5334ef7289a66eedb40fc937f6",
+          "session_lpid": "4485bf4a1fee487b1396f4ccc7911305739e1943e421e196cce26b98cfe2f472",
+          "session_srid": "129e6acd9b01d52ee33c734eb798fe1b579d52aa30671052f72ca5c116ac4272",
+          "session_uval": "5d3cdce3e1493605cfa18fec3d771e5ada20582953e915232846ece7a9656d70",
+          "local_referrers": "79394cdd75a357a65791e55c37ff4eeaa01bbd3ce39fc6e26bd90e4ef0ccd90b",
+          "local_utmValues": "d0388bf67bb4ba2cb15911c9e042f942332c7d193f03940d5d512a9b1f6b167a"
+        }
+      },
+      "dom_snapshot_ref": "ui-artifacts/runs/098c72ff-5105-4f8b-9fb9-5235dff90a5d/nodes/07a9ffac-54ba-4326-a358-89480a27eb68/dom_snapshot.html",
+      "a11y_snapshot_ref": "ui-artifacts/runs/098c72ff-5105-4f8b-9fb9-5235dff90a5d/nodes/07a9ffac-54ba-4326-a358-89480a27eb68/a11y_snapshot.json",
+      "screenshot_ref": "ui-artifacts/runs/098c72ff-5105-4f8b-9fb9-5235dff90a5d/nodes/07a9ffac-54ba-4326-a358-89480a27eb68/screenshot.png",
+      "storage_ref": "ui-artifacts/runs/098c72ff-5105-4f8b-9fb9-5235dff90a5d/nodes/07a9ffac-54ba-4326-a358-89480a27eb68/storage_state.json",
+      "created_at": "2026-01-28T06:32:57.544903+00:00",
+      "route_depth": 2,
+      "modal_depth": 0,
+      "interaction_depth": 0,
+      "css_snapshot_ref": "ui-artifacts/runs/098c72ff-5105-4f8b-9fb9-5235dff90a5d/nodes/07a9ffac-54ba-4326-a358-89480a27eb68/styles.css",
+      "input_state_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "edges": [
+    {
+      "id": "39a167ad-dab0-4609-a5da-75cb948bfb7c",
+      "run_id": "098c72ff-5105-4f8b-9fb9-5235dff90a5d",
+      "from_node_id": "2cb6fbf3-b1f7-4eab-82ba-6c96854d3f1d",
+      "to_node_id": null,
+      "action_type": "click",
+      "action_target": "role=button name=Logout",
+      "action_value": "",
+      "cost": 1,
+      "latency_ms": 1480,
+      "outcome": "fail",
+      "error_msg": "액션 실행 후 같은 노드로 돌아옴",
+      "intent_label": null,
+      "intent_confidence": null,
+      "dom_diff_ref": null,
+      "network_summary_ref": null,
+      "created_at": "2026-01-28T06:31:14.277616+00:00",
+      "depth_diff_type": "same_node"
+    },
+    {
+      "id": "726f9949-0e4e-4fe8-8d00-874f242aa50d",
+      "run_id": "098c72ff-5105-4f8b-9fb9-5235dff90a5d",
+      "from_node_id": "2cb6fbf3-b1f7-4eab-82ba-6c96854d3f1d",
+      "to_node_id": "b70dc5d6-f82a-4847-b0c6-49a823dd14de",
+      "action_type": "click",
+      "action_target": "role=button name=Start Phase 1",
+      "action_value": "",
+      "cost": 1,
+      "latency_ms": 1248,
+      "outcome": "success",
+      "error_msg": null,
+      "intent_label": "start_phase_1",
+      "intent_confidence": null,
+      "dom_diff_ref": null,
+      "network_summary_ref": null,
+      "created_at": "2026-01-28T06:31:28.661372+00:00",
+      "depth_diff_type": "new_page"
+    },
+    {
+      "id": "8e2a6108-db5a-4cb3-b0cb-8ff40caa5c8f",
+      "run_id": "098c72ff-5105-4f8b-9fb9-5235dff90a5d",
+      "from_node_id": "2cb6fbf3-b1f7-4eab-82ba-6c96854d3f1d",
+      "to_node_id": null,
+      "action_type": "click",
+      "action_target": "role=link name=Dashboard",
+      "action_value": "",
+      "cost": 1,
+      "latency_ms": 1764,
+      "outcome": "fail",
+      "error_msg": "액션 실행 후 같은 노드로 돌아옴",
+      "intent_label": null,
+      "intent_confidence": null,
+      "dom_diff_ref": null,
+      "network_summary_ref": null,
+      "created_at": "2026-01-28T06:31:48.838388+00:00",
+      "depth_diff_type": "same_node"
+    },
+    {
+      "id": "268f0c0e-be31-4c07-9833-966bfd19bd43",
+      "run_id": "098c72ff-5105-4f8b-9fb9-5235dff90a5d",
+      "from_node_id": "2cb6fbf3-b1f7-4eab-82ba-6c96854d3f1d",
+      "to_node_id": null,
+      "action_type": "hover",
+      "action_target": "role=link name=Dashboard",
+      "action_value": "",
+      "cost": 1,
+      "latency_ms": 473,
+      "outcome": "fail",
+      "error_msg": "액션 실행 후 같은 노드로 돌아옴",
+      "intent_label": null,
+      "intent_confidence": null,
+      "dom_diff_ref": null,
+      "network_summary_ref": null,
+      "created_at": "2026-01-28T06:31:54.693514+00:00",
+      "depth_diff_type": "same_node"
+    },
+    {
+      "id": "210a3933-949d-4672-bcbe-45161e68110b",
+      "run_id": "098c72ff-5105-4f8b-9fb9-5235dff90a5d",
+      "from_node_id": "b70dc5d6-f82a-4847-b0c6-49a823dd14de",
+      "to_node_id": "07a9ffac-54ba-4326-a358-89480a27eb68",
+      "action_type": "click",
+      "action_target": "role=link name=Read our documentation to learn more about this error.",
+      "action_value": "",
+      "cost": 1,
+      "latency_ms": 5364,
+      "outcome": "success",
+      "error_msg": null,
+      "intent_label": "navigate_to_doc",
+      "intent_confidence": null,
+      "dom_diff_ref": null,
+      "network_summary_ref": null,
+      "created_at": "2026-01-28T06:33:01.532293+00:00",
+      "depth_diff_type": "new_page"
+    }
+  ]
+}

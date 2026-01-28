@@ -1,0 +1,1643 @@
+{
+  "run_id": "749929e2-c56f-4a62-ac4a-60762ed0b852",
+  "timestamp": "2026-01-28T12:49:26.867216",
+  "total_score": 53.7,
+  "category_scores": {
+    "learnability": 100.0,
+    "efficiency": 27.8,
+    "control": 33.3
+  },
+  "summary": {
+    "node_count": 4,
+    "edge_count": 11,
+    "path_count": 7
+  },
+  "details": {
+    "static_analysis": [
+      {
+        "node_id": "1eafa6f5-6d42-49c2-be57-ddcce2db645e",
+        "url": "https://madcamp-w2-decision-maker-web.vercel.app/login",
+        "result": {
+          "url": "https://madcamp-w2-decision-maker-web.vercel.app/login",
+          "learnability": {
+            "score": 100.0,
+            "items": [
+              {
+                "element": {
+                  "tag": "button",
+                  "text": "시작하기",
+                  "id": "",
+                  "class": "login-primary-btn",
+                  "type": "button"
+                },
+                "checks": [
+                  {
+                    "name": "표준 태그 사용",
+                    "status": "PASS",
+                    "message": "표준 태그 <button> 사용됨"
+                  },
+                  {
+                    "name": "레이블(텍스트) 제공",
+                    "status": "PASS",
+                    "message": "레이블 존재함"
+                  },
+                  {
+                    "name": "마우스 커서 스타일",
+                    "status": "PASS",
+                    "message": "적절한 커서 사용됨"
+                  },
+                  {
+                    "name": "터치 타겟 크기",
+                    "status": "PASS",
+                    "message": "크기 적절함 (420x44px)"
+                  },
+                  {
+                    "name": "텍스트 명암비(가독성)",
+                    "status": "PASS",
+                    "message": "대비 적절함 (17.85:1)"
+                  },
+                  {
+                    "name": "배경 대비 가시성",
+                    "status": "PASS",
+                    "message": "배경과 구분 명확함"
+                  }
+                ]
+              },
+              {
+                "element": {
+                  "tag": "button",
+                  "text": "Google 계정으로 계속하기",
+                  "id": "",
+                  "class": "google-login-btn",
+                  "type": "button"
+                },
+                "checks": [
+                  {
+                    "name": "표준 태그 사용",
+                    "status": "PASS",
+                    "message": "표준 태그 <button> 사용됨"
+                  },
+                  {
+                    "name": "레이블(텍스트) 제공",
+                    "status": "PASS",
+                    "message": "레이블 존재함"
+                  },
+                  {
+                    "name": "마우스 커서 스타일",
+                    "status": "PASS",
+                    "message": "커서 스타일 적절함"
+                  },
+                  {
+                    "name": "터치 타겟 크기",
+                    "status": "PASS",
+                    "message": "크기 적절함 (420x44px)"
+                  },
+                  {
+                    "name": "텍스트 명암비(가독성)",
+                    "status": "PASS",
+                    "message": "대비 적절함 (17.85:1)"
+                  },
+                  {
+                    "name": "배경 대비 가시성",
+                    "status": "PASS",
+                    "message": "배경과 구분 명확함"
+                  }
+                ]
+              }
+            ]
+          },
+          "efficiency": {
+            "score": 100.0,
+            "items": []
+          },
+          "control": {
+            "score": 50.0,
+            "items": [
+              {
+                "element": {
+                  "tag": "h1",
+                  "text": "Decision Maker",
+                  "id": "",
+                  "class": "login-title",
+                  "type": "heading"
+                },
+                "checks": [
+                  {
+                    "name": "페이지 제목(Heading)",
+                    "status": "PASS",
+                    "message": "헤딩 존재함: 'Decision Maker'"
+                  }
+                ]
+              },
+              {
+                "element": {
+                  "tag": "Page",
+                  "text": "Global Check",
+                  "type": "page"
+                },
+                "checks": [
+                  {
+                    "name": "이동 경로(Breadcrumb)",
+                    "status": "FAIL",
+                    "message": "Breadcrumb(이동 경로)가 제공되지 않음"
+                  }
+                ]
+              }
+            ]
+          },
+          "node_id": null
+        }
+      },
+      {
+        "node_id": "f237b963-1d48-4d16-9cda-37d7fe1c9b2e",
+        "url": "https://madcamp-w2-decision-maker-web.vercel.app/login",
+        "result": {
+          "url": "https://madcamp-w2-decision-maker-web.vercel.app/login",
+          "learnability": {
+            "score": 100.0,
+            "items": [
+              {
+                "element": {
+                  "tag": "button",
+                  "text": "시작하기",
+                  "id": "",
+                  "class": "login-primary-btn",
+                  "type": "button"
+                },
+                "checks": [
+                  {
+                    "name": "표준 태그 사용",
+                    "status": "PASS",
+                    "message": "표준 태그 <button> 사용됨"
+                  },
+                  {
+                    "name": "레이블(텍스트) 제공",
+                    "status": "PASS",
+                    "message": "레이블 존재함"
+                  },
+                  {
+                    "name": "마우스 커서 스타일",
+                    "status": "PASS",
+                    "message": "적절한 커서 사용됨"
+                  },
+                  {
+                    "name": "터치 타겟 크기",
+                    "status": "PASS",
+                    "message": "크기 적절함 (420x44px)"
+                  },
+                  {
+                    "name": "텍스트 명암비(가독성)",
+                    "status": "PASS",
+                    "message": "대비 적절함 (17.85:1)"
+                  },
+                  {
+                    "name": "배경 대비 가시성",
+                    "status": "PASS",
+                    "message": "배경과 구분 명확함"
+                  }
+                ]
+              },
+              {
+                "element": {
+                  "tag": "button",
+                  "text": "Google 계정으로 계속하기",
+                  "id": "",
+                  "class": "google-login-btn",
+                  "type": "button"
+                },
+                "checks": [
+                  {
+                    "name": "표준 태그 사용",
+                    "status": "PASS",
+                    "message": "표준 태그 <button> 사용됨"
+                  },
+                  {
+                    "name": "레이블(텍스트) 제공",
+                    "status": "PASS",
+                    "message": "레이블 존재함"
+                  },
+                  {
+                    "name": "마우스 커서 스타일",
+                    "status": "PASS",
+                    "message": "커서 스타일 적절함"
+                  },
+                  {
+                    "name": "터치 타겟 크기",
+                    "status": "PASS",
+                    "message": "크기 적절함 (420x44px)"
+                  },
+                  {
+                    "name": "텍스트 명암비(가독성)",
+                    "status": "PASS",
+                    "message": "대비 적절함 (17.85:1)"
+                  },
+                  {
+                    "name": "배경 대비 가시성",
+                    "status": "PASS",
+                    "message": "배경과 구분 명확함"
+                  }
+                ]
+              }
+            ]
+          },
+          "efficiency": {
+            "score": 100.0,
+            "items": []
+          },
+          "control": {
+            "score": 50.0,
+            "items": [
+              {
+                "element": {
+                  "tag": "h1",
+                  "text": "Decision Maker",
+                  "id": "",
+                  "class": "login-title",
+                  "type": "heading"
+                },
+                "checks": [
+                  {
+                    "name": "페이지 제목(Heading)",
+                    "status": "PASS",
+                    "message": "헤딩 존재함: 'Decision Maker'"
+                  }
+                ]
+              },
+              {
+                "element": {
+                  "tag": "Page",
+                  "text": "Global Check",
+                  "type": "page"
+                },
+                "checks": [
+                  {
+                    "name": "이동 경로(Breadcrumb)",
+                    "status": "FAIL",
+                    "message": "Breadcrumb(이동 경로)가 제공되지 않음"
+                  }
+                ]
+              }
+            ]
+          },
+          "node_id": null
+        }
+      },
+      {
+        "node_id": "535b5d75-c371-434c-8351-f6f96fbe1a47",
+        "url": "https://madcamp-w2-decision-maker-web.vercel.app/login",
+        "result": {
+          "url": "https://madcamp-w2-decision-maker-web.vercel.app/login",
+          "learnability": {
+            "score": 100.0,
+            "items": [
+              {
+                "element": {
+                  "tag": "button",
+                  "text": "시작하기",
+                  "id": "",
+                  "class": "login-primary-btn",
+                  "type": "button"
+                },
+                "checks": [
+                  {
+                    "name": "표준 태그 사용",
+                    "status": "PASS",
+                    "message": "표준 태그 <button> 사용됨"
+                  },
+                  {
+                    "name": "레이블(텍스트) 제공",
+                    "status": "PASS",
+                    "message": "레이블 존재함"
+                  },
+                  {
+                    "name": "마우스 커서 스타일",
+                    "status": "PASS",
+                    "message": "적절한 커서 사용됨"
+                  },
+                  {
+                    "name": "터치 타겟 크기",
+                    "status": "PASS",
+                    "message": "크기 적절함 (420x44px)"
+                  },
+                  {
+                    "name": "텍스트 명암비(가독성)",
+                    "status": "PASS",
+                    "message": "대비 적절함 (17.85:1)"
+                  },
+                  {
+                    "name": "배경 대비 가시성",
+                    "status": "PASS",
+                    "message": "배경과 구분 명확함"
+                  }
+                ]
+              },
+              {
+                "element": {
+                  "tag": "button",
+                  "text": "Google 계정으로 계속하기",
+                  "id": "",
+                  "class": "google-login-btn",
+                  "type": "button"
+                },
+                "checks": [
+                  {
+                    "name": "표준 태그 사용",
+                    "status": "PASS",
+                    "message": "표준 태그 <button> 사용됨"
+                  },
+                  {
+                    "name": "레이블(텍스트) 제공",
+                    "status": "PASS",
+                    "message": "레이블 존재함"
+                  },
+                  {
+                    "name": "마우스 커서 스타일",
+                    "status": "PASS",
+                    "message": "커서 스타일 적절함"
+                  },
+                  {
+                    "name": "터치 타겟 크기",
+                    "status": "PASS",
+                    "message": "크기 적절함 (420x44px)"
+                  },
+                  {
+                    "name": "텍스트 명암비(가독성)",
+                    "status": "PASS",
+                    "message": "대비 적절함 (17.85:1)"
+                  },
+                  {
+                    "name": "배경 대비 가시성",
+                    "status": "PASS",
+                    "message": "배경과 구분 명확함"
+                  }
+                ]
+              }
+            ]
+          },
+          "efficiency": {
+            "score": 100.0,
+            "items": []
+          },
+          "control": {
+            "score": 50.0,
+            "items": [
+              {
+                "element": {
+                  "tag": "h1",
+                  "text": "Decision Maker",
+                  "id": "",
+                  "class": "login-title",
+                  "type": "heading"
+                },
+                "checks": [
+                  {
+                    "name": "페이지 제목(Heading)",
+                    "status": "PASS",
+                    "message": "헤딩 존재함: 'Decision Maker'"
+                  }
+                ]
+              },
+              {
+                "element": {
+                  "tag": "Page",
+                  "text": "Global Check",
+                  "type": "page"
+                },
+                "checks": [
+                  {
+                    "name": "이동 경로(Breadcrumb)",
+                    "status": "FAIL",
+                    "message": "Breadcrumb(이동 경로)가 제공되지 않음"
+                  }
+                ]
+              }
+            ]
+          },
+          "node_id": null
+        }
+      },
+      {
+        "node_id": "36dd116c-b67a-40c1-b5bc-dddb5d7c1548",
+        "url": "https://madcamp-w2-decision-maker-web.vercel.app/login",
+        "result": {
+          "url": "https://madcamp-w2-decision-maker-web.vercel.app/login",
+          "learnability": {
+            "score": 100.0,
+            "items": [
+              {
+                "element": {
+                  "tag": "button",
+                  "text": "시작하기",
+                  "id": "",
+                  "class": "login-primary-btn",
+                  "type": "button"
+                },
+                "checks": [
+                  {
+                    "name": "표준 태그 사용",
+                    "status": "PASS",
+                    "message": "표준 태그 <button> 사용됨"
+                  },
+                  {
+                    "name": "레이블(텍스트) 제공",
+                    "status": "PASS",
+                    "message": "레이블 존재함"
+                  },
+                  {
+                    "name": "마우스 커서 스타일",
+                    "status": "PASS",
+                    "message": "커서 스타일 적절함"
+                  },
+                  {
+                    "name": "터치 타겟 크기",
+                    "status": "PASS",
+                    "message": "크기 적절함 (420x44px)"
+                  },
+                  {
+                    "name": "텍스트 명암비(가독성)",
+                    "status": "PASS",
+                    "message": "대비 적절함 (17.85:1)"
+                  },
+                  {
+                    "name": "배경 대비 가시성",
+                    "status": "PASS",
+                    "message": "배경과 구분 명확함"
+                  }
+                ]
+              },
+              {
+                "element": {
+                  "tag": "button",
+                  "text": "Google 계정으로 계속하기",
+                  "id": "",
+                  "class": "google-login-btn",
+                  "type": "button"
+                },
+                "checks": [
+                  {
+                    "name": "표준 태그 사용",
+                    "status": "PASS",
+                    "message": "표준 태그 <button> 사용됨"
+                  },
+                  {
+                    "name": "레이블(텍스트) 제공",
+                    "status": "PASS",
+                    "message": "레이블 존재함"
+                  },
+                  {
+                    "name": "마우스 커서 스타일",
+                    "status": "PASS",
+                    "message": "커서 스타일 적절함"
+                  },
+                  {
+                    "name": "터치 타겟 크기",
+                    "status": "PASS",
+                    "message": "크기 적절함 (420x44px)"
+                  },
+                  {
+                    "name": "텍스트 명암비(가독성)",
+                    "status": "PASS",
+                    "message": "대비 적절함 (17.85:1)"
+                  },
+                  {
+                    "name": "배경 대비 가시성",
+                    "status": "PASS",
+                    "message": "배경과 구분 명확함"
+                  }
+                ]
+              }
+            ]
+          },
+          "efficiency": {
+            "score": 100.0,
+            "items": []
+          },
+          "control": {
+            "score": 50.0,
+            "items": [
+              {
+                "element": {
+                  "tag": "h1",
+                  "text": "Decision Maker",
+                  "id": "",
+                  "class": "login-title",
+                  "type": "heading"
+                },
+                "checks": [
+                  {
+                    "name": "페이지 제목(Heading)",
+                    "status": "PASS",
+                    "message": "헤딩 존재함: 'Decision Maker'"
+                  }
+                ]
+              },
+              {
+                "element": {
+                  "tag": "Page",
+                  "text": "Global Check",
+                  "type": "page"
+                },
+                "checks": [
+                  {
+                    "name": "이동 경로(Breadcrumb)",
+                    "status": "FAIL",
+                    "message": "Breadcrumb(이동 경로)가 제공되지 않음"
+                  }
+                ]
+              }
+            ]
+          },
+          "node_id": null
+        }
+      }
+    ],
+    "transition_analysis": [
+      {
+        "edge_id": "a182912f-5cba-4f6a-be89-c3894295c1a8",
+        "action": "click on role=button name=Google 계정으로 계속하기",
+        "result": {
+          "learnability": {
+            "score": 100.0,
+            "passed": [],
+            "failed": []
+          },
+          "efficiency": {
+            "score": 0.0,
+            "passed": [],
+            "failed": [
+              {
+                "check": "System Latency",
+                "message": "지연 시간(1347ms)이 1초 이상으로 느립니다."
+              }
+            ],
+            "latency": {
+              "duration_ms": 1347,
+              "status": "Slow",
+              "description": "반응이 느립니다 (1347ms). 사용자가 기다려야 하는 이유를 알 수 있는 로딩 UI나 진행 상태 표시가 필요합니다."
+            }
+          },
+          "control": {
+            "score": 0.0,
+            "passed": [],
+            "failed": [
+              {
+                "check": "Visibility of Status",
+                "message": "작업 시간이 길었음에도 '처리 중'임을 나타내는 명확한 지표(로딩 등)를 찾기 어렵습니다."
+              }
+            ]
+          }
+        }
+      },
+      {
+        "edge_id": "6a40438c-3d6f-4adb-97f2-3e5cf234ebfd",
+        "action": "fill on role=textbox name=PW",
+        "result": {
+          "learnability": {
+            "score": 100.0,
+            "passed": [],
+            "failed": []
+          },
+          "efficiency": {
+            "score": 100.0,
+            "passed": [
+              {
+                "check": "System Latency",
+                "message": "지연 시간(949ms)이 1초 미만으로 양호합니다."
+              }
+            ],
+            "failed": [],
+            "latency": {
+              "duration_ms": 949,
+              "status": "Good",
+              "description": "반응이 양호합니다 (1초 미만). 사용자의 사고 흐름이 끊기지 않습니다."
+            }
+          },
+          "control": {
+            "score": 100.0,
+            "passed": [
+              {
+                "check": "Visibility of Status",
+                "message": "작업이 신속히 처리되어 즉각적으로 상태가 전환되었습니다."
+              }
+            ],
+            "failed": []
+          }
+        }
+      },
+      {
+        "edge_id": "a9f2903d-554e-49a6-8a81-b404f123a355",
+        "action": "fill on role=textbox name=E-mail",
+        "result": {
+          "learnability": {
+            "score": 100.0,
+            "passed": [],
+            "failed": []
+          },
+          "efficiency": {
+            "score": 100.0,
+            "passed": [
+              {
+                "check": "System Latency",
+                "message": "지연 시간(904ms)이 1초 미만으로 양호합니다."
+              }
+            ],
+            "failed": [],
+            "latency": {
+              "duration_ms": 904,
+              "status": "Good",
+              "description": "반응이 양호합니다 (1초 미만). 사용자의 사고 흐름이 끊기지 않습니다."
+            }
+          },
+          "control": {
+            "score": 100.0,
+            "passed": [
+              {
+                "check": "Visibility of Status",
+                "message": "작업이 신속히 처리되어 즉각적으로 상태가 전환되었습니다."
+              }
+            ],
+            "failed": []
+          }
+        }
+      },
+      {
+        "edge_id": "a7b3258e-a848-4485-abf8-533e04c63d06",
+        "action": "fill on role=textbox name=E-mail",
+        "result": {
+          "learnability": {
+            "score": 100.0,
+            "passed": [],
+            "failed": []
+          },
+          "efficiency": {
+            "score": 100.0,
+            "passed": [
+              {
+                "check": "System Latency",
+                "message": "지연 시간(925ms)이 1초 미만으로 양호합니다."
+              }
+            ],
+            "failed": [],
+            "latency": {
+              "duration_ms": 925,
+              "status": "Good",
+              "description": "반응이 양호합니다 (1초 미만). 사용자의 사고 흐름이 끊기지 않습니다."
+            }
+          },
+          "control": {
+            "score": 100.0,
+            "passed": [
+              {
+                "check": "Visibility of Status",
+                "message": "작업이 신속히 처리되어 즉각적으로 상태가 전환되었습니다."
+              }
+            ],
+            "failed": []
+          }
+        }
+      },
+      {
+        "edge_id": "5f387345-0fb2-4b9b-84fe-2f00d98e626c",
+        "action": "click on role=button name=Google 계정으로 계속하기",
+        "result": {
+          "learnability": {
+            "score": 100.0,
+            "passed": [],
+            "failed": []
+          },
+          "efficiency": {
+            "score": 0.0,
+            "passed": [],
+            "failed": [
+              {
+                "check": "System Latency",
+                "message": "지연 시간(1342ms)이 1초 이상으로 느립니다."
+              }
+            ],
+            "latency": {
+              "duration_ms": 1342,
+              "status": "Slow",
+              "description": "반응이 느립니다 (1342ms). 사용자가 기다려야 하는 이유를 알 수 있는 로딩 UI나 진행 상태 표시가 필요합니다."
+            }
+          },
+          "control": {
+            "score": 0.0,
+            "passed": [],
+            "failed": [
+              {
+                "check": "Visibility of Status",
+                "message": "작업 시간이 길었음에도 '처리 중'임을 나타내는 명확한 지표(로딩 등)를 찾기 어렵습니다."
+              }
+            ]
+          }
+        }
+      },
+      {
+        "edge_id": "26fd8fc8-ac4a-4bc1-9f45-383d030a6251",
+        "action": "click on role=button name=Google 계정으로 계속하기",
+        "result": {
+          "learnability": {
+            "score": 100.0,
+            "passed": [],
+            "failed": []
+          },
+          "efficiency": {
+            "score": 0.0,
+            "passed": [],
+            "failed": [
+              {
+                "check": "System Latency",
+                "message": "지연 시간(1400ms)이 1초 이상으로 느립니다."
+              }
+            ],
+            "latency": {
+              "duration_ms": 1400,
+              "status": "Slow",
+              "description": "반응이 느립니다 (1400ms). 사용자가 기다려야 하는 이유를 알 수 있는 로딩 UI나 진행 상태 표시가 필요합니다."
+            }
+          },
+          "control": {
+            "score": 0.0,
+            "passed": [],
+            "failed": [
+              {
+                "check": "Visibility of Status",
+                "message": "작업 시간이 길었음에도 '처리 중'임을 나타내는 명확한 지표(로딩 등)를 찾기 어렵습니다."
+              }
+            ]
+          }
+        }
+      },
+      {
+        "edge_id": "38d45b3c-a1a3-4737-9b15-493ecf236c65",
+        "action": "fill on role=textbox name=PW",
+        "result": {
+          "learnability": {
+            "score": 100.0,
+            "passed": [],
+            "failed": []
+          },
+          "efficiency": {
+            "score": 0.0,
+            "passed": [],
+            "failed": [
+              {
+                "check": "System Latency",
+                "message": "지연 시간(1014ms)이 1초 이상으로 느립니다."
+              }
+            ],
+            "latency": {
+              "duration_ms": 1014,
+              "status": "Slow",
+              "description": "반응이 느립니다 (1014ms). 사용자가 기다려야 하는 이유를 알 수 있는 로딩 UI나 진행 상태 표시가 필요합니다."
+            }
+          },
+          "control": {
+            "score": 0.0,
+            "passed": [],
+            "failed": [
+              {
+                "check": "Visibility of Status",
+                "message": "작업 시간이 길었음에도 '처리 중'임을 나타내는 명확한 지표(로딩 등)를 찾기 어렵습니다."
+              }
+            ]
+          }
+        }
+      },
+      {
+        "edge_id": "4034417c-bb5a-463c-b8d8-6cb0ab34d5e8",
+        "action": "click on role=button name=Google 계정으로 계속하기",
+        "result": {
+          "learnability": {
+            "score": 100.0,
+            "passed": [],
+            "failed": []
+          },
+          "efficiency": {
+            "score": 0.0,
+            "passed": [],
+            "failed": [
+              {
+                "check": "System Latency",
+                "message": "지연 시간(1332ms)이 1초 이상으로 느립니다."
+              }
+            ],
+            "latency": {
+              "duration_ms": 1332,
+              "status": "Slow",
+              "description": "반응이 느립니다 (1332ms). 사용자가 기다려야 하는 이유를 알 수 있는 로딩 UI나 진행 상태 표시가 필요합니다."
+            }
+          },
+          "control": {
+            "score": 0.0,
+            "passed": [],
+            "failed": [
+              {
+                "check": "Visibility of Status",
+                "message": "작업 시간이 길었음에도 '처리 중'임을 나타내는 명확한 지표(로딩 등)를 찾기 어렵습니다."
+              }
+            ]
+          }
+        }
+      },
+      {
+        "edge_id": "bebc5747-3012-4e26-b89d-08b1fff1b663",
+        "action": "click on role=button name=시작하기",
+        "result": {
+          "learnability": {
+            "score": 100.0,
+            "passed": [],
+            "failed": []
+          },
+          "efficiency": {
+            "score": 0.0,
+            "passed": [],
+            "failed": [
+              {
+                "check": "System Latency",
+                "message": "지연 시간(1769ms)이 1초 이상으로 느립니다."
+              }
+            ],
+            "latency": {
+              "duration_ms": 1769,
+              "status": "Slow",
+              "description": "반응이 느립니다 (1769ms). 사용자가 기다려야 하는 이유를 알 수 있는 로딩 UI나 진행 상태 표시가 필요합니다."
+            }
+          },
+          "control": {
+            "score": 0.0,
+            "passed": [],
+            "failed": [
+              {
+                "check": "Visibility of Status",
+                "message": "작업 시간이 길었음에도 '처리 중'임을 나타내는 명확한 지표(로딩 등)를 찾기 어렵습니다."
+              }
+            ]
+          }
+        }
+      },
+      {
+        "edge_id": "30695d3d-b827-4089-98ec-bd1291800d54",
+        "action": "click on role=button name=Google 계정으로 계속하기",
+        "result": {
+          "learnability": {
+            "score": 100.0,
+            "passed": [],
+            "failed": []
+          },
+          "efficiency": {
+            "score": 0.0,
+            "passed": [],
+            "failed": [
+              {
+                "check": "System Latency",
+                "message": "지연 시간(1109ms)이 1초 이상으로 느립니다."
+              }
+            ],
+            "latency": {
+              "duration_ms": 1109,
+              "status": "Slow",
+              "description": "반응이 느립니다 (1109ms). 사용자가 기다려야 하는 이유를 알 수 있는 로딩 UI나 진행 상태 표시가 필요합니다."
+            }
+          },
+          "control": {
+            "score": 0.0,
+            "passed": [],
+            "failed": [
+              {
+                "check": "Visibility of Status",
+                "message": "작업 시간이 길었음에도 '처리 중'임을 나타내는 명확한 지표(로딩 등)를 찾기 어렵습니다."
+              }
+            ]
+          }
+        }
+      },
+      {
+        "edge_id": "e1f3dbab-a6b9-4ec3-91a6-226158b6290f",
+        "action": "click on role=button name=Google 계정으로 계속하기",
+        "result": {
+          "learnability": {
+            "score": 100.0,
+            "passed": [],
+            "failed": []
+          },
+          "efficiency": {
+            "score": 0.0,
+            "passed": [],
+            "failed": [
+              {
+                "check": "System Latency",
+                "message": "지연 시간(1174ms)이 1초 이상으로 느립니다."
+              }
+            ],
+            "latency": {
+              "duration_ms": 1174,
+              "status": "Slow",
+              "description": "반응이 느립니다 (1174ms). 사용자가 기다려야 하는 이유를 알 수 있는 로딩 UI나 진행 상태 표시가 필요합니다."
+            }
+          },
+          "control": {
+            "score": 0.0,
+            "passed": [],
+            "failed": [
+              {
+                "check": "Visibility of Status",
+                "message": "작업 시간이 길었음에도 '처리 중'임을 나타내는 명확한 지표(로딩 등)를 찾기 어렵습니다."
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "workflow_analysis": [
+      {
+        "path_index": 0,
+        "path_summary": "1eafa6f5 -> f237b963 -> 1eafa6f5",
+        "result": {
+          "learnability": {
+            "score": 100.0,
+            "passed": [],
+            "failed": []
+          },
+          "efficiency": {
+            "score": 100.0,
+            "passed": [
+              {
+                "check": "Workflow Efficiency",
+                "message": "전체 예상 작업 시간(7.3초)이 짧고 효율적입니다."
+              }
+            ],
+            "failed": [],
+            "interaction_efficiency": {
+              "klm_breakdown": [
+                {
+                  "step": 0,
+                  "action": "fill",
+                  "ops": [
+                    "M",
+                    "P",
+                    "B",
+                    "H",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K"
+                  ],
+                  "est_time": 4.75
+                },
+                {
+                  "step": 1,
+                  "action": "click",
+                  "ops": [
+                    "M",
+                    "P",
+                    "B"
+                  ],
+                  "est_time": 2.55
+                }
+              ],
+              "total_estimated_time_s": 7.3
+            },
+            "target_size_spacing": {
+              "size_issues": [],
+              "fitts_issues": [
+                {
+                  "step": 1,
+                  "target": "role=button name=Google 계정으로 계속하기",
+                  "distance": 320.5,
+                  "width": 44,
+                  "ID": 3.05,
+                  "message": "높은 난이도 지수 (먼 거리 또는 작은 목표)."
+                }
+              ]
+            }
+          },
+          "control": {
+            "score": 100.0,
+            "passed": [],
+            "failed": []
+          }
+        }
+      },
+      {
+        "path_index": 1,
+        "path_summary": "1eafa6f5 -> 535b5d75 -> 1eafa6f5",
+        "result": {
+          "learnability": {
+            "score": 100.0,
+            "passed": [],
+            "failed": []
+          },
+          "efficiency": {
+            "score": 100.0,
+            "passed": [
+              {
+                "check": "Workflow Efficiency",
+                "message": "전체 예상 작업 시간(8.3초)이 짧고 효율적입니다."
+              }
+            ],
+            "failed": [],
+            "interaction_efficiency": {
+              "klm_breakdown": [
+                {
+                  "step": 0,
+                  "action": "fill",
+                  "ops": [
+                    "M",
+                    "P",
+                    "B",
+                    "H",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K"
+                  ],
+                  "est_time": 5.75
+                },
+                {
+                  "step": 1,
+                  "action": "click",
+                  "ops": [
+                    "M",
+                    "P",
+                    "B"
+                  ],
+                  "est_time": 2.55
+                }
+              ],
+              "total_estimated_time_s": 8.3
+            },
+            "target_size_spacing": {
+              "size_issues": [],
+              "fitts_issues": [
+                {
+                  "step": 1,
+                  "target": "role=button name=Google 계정으로 계속하기",
+                  "distance": 320.5,
+                  "width": 44,
+                  "ID": 3.05,
+                  "message": "높은 난이도 지수 (먼 거리 또는 작은 목표)."
+                }
+              ]
+            }
+          },
+          "control": {
+            "score": 100.0,
+            "passed": [],
+            "failed": []
+          }
+        }
+      },
+      {
+        "path_index": 2,
+        "path_summary": "1eafa6f5 -> f237b963 -> 535b5d75 -> 1eafa6f5",
+        "result": {
+          "learnability": {
+            "score": 100.0,
+            "passed": [],
+            "failed": []
+          },
+          "efficiency": {
+            "score": 0.0,
+            "passed": [],
+            "failed": [
+              {
+                "check": "Workflow Efficiency",
+                "message": "전체 예상 작업 시간(13.05초)이 다소 길어 효율성이 떨어질 수 있습니다."
+              }
+            ],
+            "interaction_efficiency": {
+              "klm_breakdown": [
+                {
+                  "step": 0,
+                  "action": "fill",
+                  "ops": [
+                    "M",
+                    "P",
+                    "B",
+                    "H",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K"
+                  ],
+                  "est_time": 4.75
+                },
+                {
+                  "step": 1,
+                  "action": "fill",
+                  "ops": [
+                    "M",
+                    "P",
+                    "B",
+                    "H",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K"
+                  ],
+                  "est_time": 5.75
+                },
+                {
+                  "step": 2,
+                  "action": "click",
+                  "ops": [
+                    "M",
+                    "P",
+                    "B"
+                  ],
+                  "est_time": 2.55
+                }
+              ],
+              "total_estimated_time_s": 13.05
+            },
+            "target_size_spacing": {
+              "size_issues": [],
+              "fitts_issues": [
+                {
+                  "step": 2,
+                  "target": "role=button name=Google 계정으로 계속하기",
+                  "distance": 320.5,
+                  "width": 44,
+                  "ID": 3.05,
+                  "message": "높은 난이도 지수 (먼 거리 또는 작은 목표)."
+                }
+              ]
+            }
+          },
+          "control": {
+            "score": 100.0,
+            "passed": [],
+            "failed": []
+          }
+        }
+      },
+      {
+        "path_index": 3,
+        "path_summary": "1eafa6f5 -> 535b5d75 -> 36dd116c -> 1eafa6f5",
+        "result": {
+          "learnability": {
+            "score": 100.0,
+            "passed": [],
+            "failed": []
+          },
+          "efficiency": {
+            "score": 0.0,
+            "passed": [],
+            "failed": [
+              {
+                "check": "Workflow Efficiency",
+                "message": "전체 예상 작업 시간(13.05초)이 다소 길어 효율성이 떨어질 수 있습니다."
+              }
+            ],
+            "interaction_efficiency": {
+              "klm_breakdown": [
+                {
+                  "step": 0,
+                  "action": "fill",
+                  "ops": [
+                    "M",
+                    "P",
+                    "B",
+                    "H",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K"
+                  ],
+                  "est_time": 5.75
+                },
+                {
+                  "step": 1,
+                  "action": "fill",
+                  "ops": [
+                    "M",
+                    "P",
+                    "B",
+                    "H",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K"
+                  ],
+                  "est_time": 4.75
+                },
+                {
+                  "step": 2,
+                  "action": "click",
+                  "ops": [
+                    "M",
+                    "P",
+                    "B"
+                  ],
+                  "est_time": 2.55
+                }
+              ],
+              "total_estimated_time_s": 13.05
+            },
+            "target_size_spacing": {
+              "size_issues": [],
+              "fitts_issues": [
+                {
+                  "step": 2,
+                  "target": "role=button name=시작하기",
+                  "distance": 328.9,
+                  "width": 44,
+                  "ID": 3.08,
+                  "message": "높은 난이도 지수 (먼 거리 또는 작은 목표)."
+                }
+              ]
+            }
+          },
+          "control": {
+            "score": 100.0,
+            "passed": [],
+            "failed": []
+          }
+        }
+      },
+      {
+        "path_index": 4,
+        "path_summary": "1eafa6f5 -> 535b5d75 -> 36dd116c -> 535b5d75",
+        "result": {
+          "learnability": {
+            "score": 100.0,
+            "passed": [],
+            "failed": []
+          },
+          "efficiency": {
+            "score": 0.0,
+            "passed": [],
+            "failed": [
+              {
+                "check": "Workflow Efficiency",
+                "message": "전체 예상 작업 시간(13.05초)이 다소 길어 효율성이 떨어질 수 있습니다."
+              }
+            ],
+            "interaction_efficiency": {
+              "klm_breakdown": [
+                {
+                  "step": 0,
+                  "action": "fill",
+                  "ops": [
+                    "M",
+                    "P",
+                    "B",
+                    "H",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K"
+                  ],
+                  "est_time": 5.75
+                },
+                {
+                  "step": 1,
+                  "action": "fill",
+                  "ops": [
+                    "M",
+                    "P",
+                    "B",
+                    "H",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K"
+                  ],
+                  "est_time": 4.75
+                },
+                {
+                  "step": 2,
+                  "action": "click",
+                  "ops": [
+                    "M",
+                    "P",
+                    "B"
+                  ],
+                  "est_time": 2.55
+                }
+              ],
+              "total_estimated_time_s": 13.05
+            },
+            "target_size_spacing": {
+              "size_issues": [],
+              "fitts_issues": [
+                {
+                  "step": 2,
+                  "target": "role=button name=Google 계정으로 계속하기",
+                  "distance": 320.5,
+                  "width": 44,
+                  "ID": 3.05,
+                  "message": "높은 난이도 지수 (먼 거리 또는 작은 목표)."
+                }
+              ]
+            }
+          },
+          "control": {
+            "score": 100.0,
+            "passed": [],
+            "failed": []
+          }
+        }
+      },
+      {
+        "path_index": 5,
+        "path_summary": "1eafa6f5 -> f237b963 -> 535b5d75 -> 36dd116c -> 1eafa6f5",
+        "result": {
+          "learnability": {
+            "score": 100.0,
+            "passed": [],
+            "failed": []
+          },
+          "efficiency": {
+            "score": 0.0,
+            "passed": [],
+            "failed": [
+              {
+                "check": "Workflow Efficiency",
+                "message": "전체 예상 작업 시간(17.8초)이 다소 길어 효율성이 떨어질 수 있습니다."
+              }
+            ],
+            "interaction_efficiency": {
+              "klm_breakdown": [
+                {
+                  "step": 0,
+                  "action": "fill",
+                  "ops": [
+                    "M",
+                    "P",
+                    "B",
+                    "H",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K"
+                  ],
+                  "est_time": 4.75
+                },
+                {
+                  "step": 1,
+                  "action": "fill",
+                  "ops": [
+                    "M",
+                    "P",
+                    "B",
+                    "H",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K"
+                  ],
+                  "est_time": 5.75
+                },
+                {
+                  "step": 2,
+                  "action": "fill",
+                  "ops": [
+                    "M",
+                    "P",
+                    "B",
+                    "H",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K"
+                  ],
+                  "est_time": 4.75
+                },
+                {
+                  "step": 3,
+                  "action": "click",
+                  "ops": [
+                    "M",
+                    "P",
+                    "B"
+                  ],
+                  "est_time": 2.55
+                }
+              ],
+              "total_estimated_time_s": 17.8
+            },
+            "target_size_spacing": {
+              "size_issues": [],
+              "fitts_issues": [
+                {
+                  "step": 3,
+                  "target": "role=button name=시작하기",
+                  "distance": 328.9,
+                  "width": 44,
+                  "ID": 3.08,
+                  "message": "높은 난이도 지수 (먼 거리 또는 작은 목표)."
+                }
+              ]
+            }
+          },
+          "control": {
+            "score": 100.0,
+            "passed": [],
+            "failed": []
+          }
+        }
+      },
+      {
+        "path_index": 6,
+        "path_summary": "1eafa6f5 -> f237b963 -> 535b5d75 -> 36dd116c -> 535b5d75",
+        "result": {
+          "learnability": {
+            "score": 100.0,
+            "passed": [],
+            "failed": []
+          },
+          "efficiency": {
+            "score": 0.0,
+            "passed": [],
+            "failed": [
+              {
+                "check": "Workflow Efficiency",
+                "message": "전체 예상 작업 시간(17.8초)이 다소 길어 효율성이 떨어질 수 있습니다."
+              }
+            ],
+            "interaction_efficiency": {
+              "klm_breakdown": [
+                {
+                  "step": 0,
+                  "action": "fill",
+                  "ops": [
+                    "M",
+                    "P",
+                    "B",
+                    "H",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K"
+                  ],
+                  "est_time": 4.75
+                },
+                {
+                  "step": 1,
+                  "action": "fill",
+                  "ops": [
+                    "M",
+                    "P",
+                    "B",
+                    "H",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K"
+                  ],
+                  "est_time": 5.75
+                },
+                {
+                  "step": 2,
+                  "action": "fill",
+                  "ops": [
+                    "M",
+                    "P",
+                    "B",
+                    "H",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K",
+                    "K"
+                  ],
+                  "est_time": 4.75
+                },
+                {
+                  "step": 3,
+                  "action": "click",
+                  "ops": [
+                    "M",
+                    "P",
+                    "B"
+                  ],
+                  "est_time": 2.55
+                }
+              ],
+              "total_estimated_time_s": 17.8
+            },
+            "target_size_spacing": {
+              "size_issues": [],
+              "fitts_issues": [
+                {
+                  "step": 3,
+                  "target": "role=button name=Google 계정으로 계속하기",
+                  "distance": 320.5,
+                  "width": 44,
+                  "ID": 3.05,
+                  "message": "높은 난이도 지수 (먼 거리 또는 작은 목표)."
+                }
+              ]
+            }
+          },
+          "control": {
+            "score": 100.0,
+            "passed": [],
+            "failed": []
+          }
+        }
+      }
+    ]
+  }
+}

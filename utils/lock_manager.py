@@ -218,3 +218,93 @@ def release_action_lock(
     lock_manager = get_lock_manager()
     key = f"action:{run_id}:{from_node_id}:{action_type}:{action_target}:{action_value}"
     return lock_manager.release_lock(key)
+
+
+def acquire_completion_check_lock(
+    run_id: UUID,
+    timeout: int = 30,
+    retry_interval: float = 0.1,
+    max_retries: int = 0  # 기본값: 재시도 없음 (즉시 실패)
+) -> bool:
+    """
+    그래프 완료 체크 락 획득 (중복 실행 방지)
+    
+    Args:
+        run_id: 탐색 세션 ID
+        timeout: 락 만료 시간 (초)
+        retry_interval: 재시도 간격 (초)
+        max_retries: 최대 재시도 횟수 (기본값: 0 - 즉시 실패)
+    
+    Returns:
+        락 획득 성공 여부
+    """
+    lock_manager = get_lock_manager()
+    key = f"completion_check:{run_id}"
+    return lock_manager.acquire_lock(key, timeout, retry_interval, max_retries)
+
+
+def release_completion_check_lock(run_id: UUID) -> bool:
+    """
+    그래프 완료 체크 락 해제
+    
+    Args:
+        run_id: 탐색 세션 ID
+    
+    Returns:
+        락 해제 성공 여부
+    """
+    lock_manager = get_lock_manager()
+    key = f"completion_check:{run_id}"
+    return lock_manager.release_lock(key)
+
+
+def is_completion_check_scheduled(run_id: UUID, window_seconds: int = 10) -> bool:
+    """
+    일정 시간 내에 완료 체크가 이미 예약되었는지 확인
+    
+    Args:
+        run_id: 탐색 세션 ID
+        window_seconds: 확인할 시간 창 (초)
+    
+    Returns:
+        예약되었으면 True, 아니면 False
+    """
+    lock_manager = get_lock_manager()
+    if not lock_manager.redis_client:
+        # Redis가 없으면 항상 False 반환 (호출 허용)
+        return False
+    
+    key = f"completion_check_scheduled:{run_id}"
+    try:
+        # 키가 존재하면 예약됨
+        exists = lock_manager.redis_client.exists(key)
+        return exists > 0
+    except Exception as e:
+        print(f"[LockManager] 완료 체크 예약 확인 중 에러: {e}")
+        return False
+
+
+def mark_completion_check_scheduled(run_id: UUID, window_seconds: int = 10) -> bool:
+    """
+    완료 체크가 예약되었음을 표시
+    
+    Args:
+        run_id: 탐색 세션 ID
+        window_seconds: 표시 유지 시간 (초)
+    
+    Returns:
+        표시 성공 여부
+    """
+    lock_manager = get_lock_manager()
+    if not lock_manager.redis_client:
+        # Redis가 없으면 항상 True 반환 (계속 진행)
+        return True
+    
+    key = f"completion_check_scheduled:{run_id}"
+    try:
+        # 키를 설정하고 만료 시간 설정
+        lock_manager.redis_client.set(key, "scheduled", ex=window_seconds)
+        return True
+    except Exception as e:
+        print(f"[LockManager] 완료 체크 예약 표시 중 에러: {e}")
+        return False

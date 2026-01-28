@@ -316,6 +316,11 @@ def _save_analysis_results_to_db(run_id: UUID, analysis_result: Dict[str, Any]):
         analysis_result: run_full_analysis의 반환 결과
     """
     try:
+        # 0. runs 테이블에 evaluation_result_json 저장
+        from repositories.run_repository import update_run
+        update_run(run_id, {"evaluation_result_json": analysis_result})
+        logger.info(f"runs 테이블에 evaluation_result_json 저장 완료: run_id={run_id}")
+        
         # 1. site_evaluation 생성
         site_eval_data = {
             "run_id": str(run_id),

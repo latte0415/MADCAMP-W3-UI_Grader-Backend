@@ -172,3 +172,35 @@ def get_nodes_by_run_id(run_id: UUID) -> List[Dict]:
     supabase = get_client()
     result = supabase.table("nodes").select("*").eq("run_id", str(run_id)).order("created_at").execute()
     return result.data or []
+
+
+def find_equivalent_nodes(
+    run_id: UUID,
+    state_hash: str,
+    a11y_hash: str,
+    input_state_hash: str,
+    exclude_node_id: Optional[UUID] = None
+) -> List[Dict]:
+    """
+    동치 노드 조회 (같은 state_hash, a11y_hash, input_state_hash를 가진 노드)
+    
+    Args:
+        run_id: 탐색 세션 ID
+        state_hash: 상태 해시
+        a11y_hash: 접근성 해시
+        input_state_hash: 입력 상태 해시
+        exclude_node_id: 제외할 노드 ID (선택적)
+    
+    Returns:
+        동치 노드 리스트
+    """
+    supabase = get_client()
+    query = supabase.table("nodes").select("*").eq("run_id", str(run_id)).eq(
+        "state_hash", state_hash
+    ).eq("a11y_hash", a11y_hash).eq("input_state_hash", input_state_hash)
+    
+    if exclude_node_id:
+        query = query.neq("id", str(exclude_node_id))
+    
+    result = query.execute()
+    return result.data or []

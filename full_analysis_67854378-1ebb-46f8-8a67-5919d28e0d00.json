@@ -1,0 +1,1493 @@
+{
+  "run_id": "67854378-1ebb-46f8-8a67-5919d28e0d00",
+  "timestamp": "2026-01-28T15:48:57.357730",
+  "total_score": 44.0,
+  "category_scores": {
+    "learnability": 67.4,
+    "efficiency": 35.3,
+    "control": 29.4
+  },
+  "summary": {
+    "node_count": 3,
+    "edge_count": 14,
+    "path_count": 3
+  },
+  "details": {
+    "static_analysis": [
+      {
+        "node_id": "5e97e5d1-711e-4b21-9c52-41521929ed5a",
+        "url": "https://testbedpage.vercel.app/",
+        "result": {
+          "url": "https://testbedpage.vercel.app/",
+          "learnability": {
+            "score": 64.7,
+            "items": [
+              {
+                "element": {
+                  "tag": "button",
+                  "text": "Logout",
+                  "id": "",
+                  "class": "logout-btn",
+                  "type": "button"
+                },
+                "checks": [
+                  {
+                    "name": "표준 태그 사용",
+                    "status": "PASS",
+                    "message": "표준 태그 <button> 사용됨"
+                  },
+                  {
+                    "name": "레이블(텍스트) 제공",
+                    "status": "PASS",
+                    "message": "레이블 존재함"
+                  },
+                  {
+                    "name": "마우스 커서 스타일",
+                    "status": "PASS",
+                    "message": "커서 스타일 적절함"
+                  },
+                  {
+                    "name": "터치 타겟 크기",
+                    "status": "PASS",
+                    "message": "크기 적절함 (64x27px)"
+                  },
+                  {
+                    "name": "텍스트 명암비(가독성)",
+                    "status": "PASS",
+                    "message": "대비 적절함 (4.53:1)"
+                  },
+                  {
+                    "name": "배경 대비 가시성",
+                    "status": "PASS",
+                    "message": "배경과 구분 명확함"
+                  }
+                ]
+              },
+              {
+                "element": {
+                  "tag": "button",
+                  "text": "Start Phase 1",
+                  "id": "",
+                  "class": "action-btn",
+                  "type": "button"
+                },
+                "checks": [
+                  {
+                    "name": "표준 태그 사용",
+                    "status": "PASS",
+                    "message": "표준 태그 <button> 사용됨"
+                  },
+                  {
+                    "name": "레이블(텍스트) 제공",
+                    "status": "PASS",
+                    "message": "레이블 존재함"
+                  },
+                  {
+                    "name": "마우스 커서 스타일",
+                    "status": "FAIL",
+                    "message": "커서가 'pointer'가 아님 ('default')"
+                  },
+                  {
+                    "name": "터치 타겟 크기",
+                    "status": "FAIL",
+                    "message": "크기가 너무 작음: 96x21px (최소 24px 권장)"
+                  },
+                  {
+                    "name": "텍스트 명암비(가독성)",
+                    "status": "PASS",
+                    "message": "대비 적절함 (18.26:1)"
+                  },
+                  {
+                    "name": "배경 대비 가시성",
+                    "status": "FAIL",
+                    "message": "배경과 구분이 잘 안됨: 1.15:1 (최소 3.0:1 권장)"
+                  }
+                ]
+              },
+              {
+                "element": {
+                  "tag": "a",
+                  "text": "Dashboard",
+                  "id": "",
+                  "class": "nav-link active",
+                  "type": "link"
+                },
+                "checks": [
+                  {
+                    "name": "표준 태그 사용",
+                    "status": "PASS",
+                    "message": "표준 태그 <a> 사용됨"
+                  },
+                  {
+                    "name": "마우스 커서 스타일",
+                    "status": "FAIL",
+                    "message": "커서가 'pointer'가 아님 ('default')"
+                  },
+                  {
+                    "name": "터치 타겟 크기",
+                    "status": "PASS",
+                    "message": "크기 적절함 (199x38px)"
+                  },
+                  {
+                    "name": "텍스트 명암비(가독성)",
+                    "status": "FAIL",
+                    "message": "대비가 낮음: 2.44:1 (최소 4.5:1 권장)"
+                  },
+                  {
+                    "name": "배경 대비 가시성",
+                    "status": "FAIL",
+                    "message": "배경과 구분이 잘 안됨: 2.32:1 (최소 3.0:1 권장)"
+                  }
+                ]
+              }
+            ]
+          },
+          "efficiency": {
+            "score": 100.0,
+            "items": []
+          },
+          "control": {
+            "score": 100.0,
+            "items": [
+              {
+                "element": {
+                  "tag": "a",
+                  "text": "Dashboard",
+                  "id": "",
+                  "class": "nav-link active",
+                  "type": "link"
+                },
+                "checks": [
+                  {
+                    "name": "현재 위치 표시",
+                    "status": "PASS",
+                    "message": "현재 페이지임을 명시함 (aria-current='page')"
+                  }
+                ]
+              },
+              {
+                "element": {
+                  "tag": "h2",
+                  "text": "UX Testing Dashboard",
+                  "id": "",
+                  "class": "",
+                  "type": "heading"
+                },
+                "checks": [
+                  {
+                    "name": "페이지 제목(Heading)",
+                    "status": "PASS",
+                    "message": "헤딩 존재함: 'UX Testing Dashboard'"
+                  }
+                ]
+              },
+              {
+                "element": {
+                  "tag": "nav",
+                  "text": "Dashboard",
+                  "id": "",
+                  "class": "",
+                  "type": "nav"
+                },
+                "checks": [
+                  {
+                    "name": "이동 경로(Breadcrumb)",
+                    "status": "PASS",
+                    "message": "Breadcrumb 제공됨"
+                  }
+                ]
+              },
+              {
+                "element": {
+                  "tag": "Page",
+                  "text": "Global Check",
+                  "type": "page"
+                },
+                "checks": [
+                  {
+                    "name": "이동 경로(Breadcrumb)",
+                    "status": "PASS",
+                    "message": "Breadcrumb 제공됨"
+                  }
+                ]
+              }
+            ]
+          },
+          "node_id": null
+        }
+      },
+      {
+        "node_id": "520cbaa0-ded7-40c4-ad9f-4ecad5d3a14d",
+        "url": "https://testbedpage.vercel.app/phase1_analyze",
+        "result": {
+          "url": "https://testbedpage.vercel.app/phase1_analyze",
+          "learnability": {
+            "score": 56.4,
+            "items": [
+              {
+                "element": {
+                  "tag": "button",
+                  "text": "Logout",
+                  "id": "",
+                  "class": "logout-btn",
+                  "type": "button"
+                },
+                "checks": [
+                  {
+                    "name": "표준 태그 사용",
+                    "status": "PASS",
+                    "message": "표준 태그 <button> 사용됨"
+                  },
+                  {
+                    "name": "레이블(텍스트) 제공",
+                    "status": "PASS",
+                    "message": "레이블 존재함"
+                  },
+                  {
+                    "name": "마우스 커서 스타일",
+                    "status": "PASS",
+                    "message": "커서 스타일 적절함"
+                  },
+                  {
+                    "name": "터치 타겟 크기",
+                    "status": "PASS",
+                    "message": "크기 적절함 (64x27px)"
+                  },
+                  {
+                    "name": "텍스트 명암비(가독성)",
+                    "status": "PASS",
+                    "message": "대비 적절함 (4.53:1)"
+                  },
+                  {
+                    "name": "배경 대비 가시성",
+                    "status": "PASS",
+                    "message": "배경과 구분 명확함"
+                  }
+                ]
+              },
+              {
+                "element": {
+                  "tag": "button",
+                  "text": "Low Contrast BG",
+                  "id": "",
+                  "class": "violation-low-contrast-bg",
+                  "type": "button"
+                },
+                "checks": [
+                  {
+                    "name": "표준 태그 사용",
+                    "status": "PASS",
+                    "message": "표준 태그 <button> 사용됨"
+                  },
+                  {
+                    "name": "레이블(텍스트) 제공",
+                    "status": "PASS",
+                    "message": "레이블 존재함"
+                  },
+                  {
+                    "name": "마우스 커서 스타일",
+                    "status": "FAIL",
+                    "message": "커서가 'pointer'가 아님 ('default')"
+                  },
+                  {
+                    "name": "터치 타겟 크기",
+                    "status": "PASS",
+                    "message": "크기 적절함 (143x37px)"
+                  },
+                  {
+                    "name": "텍스트 명암비(가독성)",
+                    "status": "FAIL",
+                    "message": "대비가 낮음: 3.11:1 (최소 4.5:1 권장)"
+                  },
+                  {
+                    "name": "배경 대비 가시성",
+                    "status": "FAIL",
+                    "message": "배경과 구분이 잘 안됨: 1.14:1 (최소 3.0:1 권장)"
+                  }
+                ]
+              },
+              {
+                "element": {
+                  "tag": "button",
+                  "text": "Low Contrast Text",
+                  "id": "",
+                  "class": "violation-low-contrast-text",
+                  "type": "button"
+                },
+                "checks": [
+                  {
+                    "name": "표준 태그 사용",
+                    "status": "PASS",
+                    "message": "표준 태그 <button> 사용됨"
+                  },
+                  {
+                    "name": "레이블(텍스트) 제공",
+                    "status": "PASS",
+                    "message": "레이블 존재함"
+                  },
+                  {
+                    "name": "마우스 커서 스타일",
+                    "status": "FAIL",
+                    "message": "커서가 'pointer'가 아님 ('default')"
+                  },
+                  {
+                    "name": "터치 타겟 크기",
+                    "status": "PASS",
+                    "message": "크기 적절함 (146x35px)"
+                  },
+                  {
+                    "name": "텍스트 명암비(가독성)",
+                    "status": "FAIL",
+                    "message": "대비가 낮음: 1.52:1 (최소 4.5:1 권장)"
+                  },
+                  {
+                    "name": "배경 대비 가시성",
+                    "status": "PASS",
+                    "message": "배경과 구분 명확함"
+                  }
+                ]
+              },
+              {
+                "element": {
+                  "tag": "button",
+                  "text": "Disabled (Looks Enabled)",
+                  "id": "",
+                  "class": "violation-bad-cursor-disabled",
+                  "type": "button"
+                },
+                "checks": [
+                  {
+                    "name": "표준 태그 사용",
+                    "status": "PASS",
+                    "message": "표준 태그 <button> 사용됨"
+                  },
+                  {
+                    "name": "레이블(텍스트) 제공",
+                    "status": "PASS",
+                    "message": "레이블 존재함"
+                  },
+                  {
+                    "name": "마우스 커서 스타일",
+                    "status": "FAIL",
+                    "message": "비활성 요소에 'pointer' 커서가 사용됨"
+                  },
+                  {
+                    "name": "터치 타겟 크기",
+                    "status": "FAIL",
+                    "message": "크기가 너무 작음: 166x19px (최소 24px 권장)"
+                  },
+                  {
+                    "name": "텍스트 명암비(가독성)",
+                    "status": "FAIL",
+                    "message": "대비가 낮음: 3.58:1 (최소 4.5:1 권장)"
+                  },
+                  {
+                    "name": "배경 대비 가시성",
+                    "status": "FAIL",
+                    "message": "배경과 구분이 잘 안됨: 1.61:1 (최소 3.0:1 권장)"
+                  }
+                ]
+              },
+              {
+                "element": {
+                  "tag": "button",
+                  "text": "Go to 'No Breadcrumb' Page",
+                  "id": "",
+                  "class": "action-btn",
+                  "type": "button"
+                },
+                "checks": [
+                  {
+                    "name": "표준 태그 사용",
+                    "status": "PASS",
+                    "message": "표준 태그 <button> 사용됨"
+                  },
+                  {
+                    "name": "레이블(텍스트) 제공",
+                    "status": "PASS",
+                    "message": "레이블 존재함"
+                  },
+                  {
+                    "name": "마우스 커서 스타일",
+                    "status": "FAIL",
+                    "message": "커서가 'pointer'가 아님 ('default')"
+                  },
+                  {
+                    "name": "터치 타겟 크기",
+                    "status": "FAIL",
+                    "message": "크기가 너무 작음: 185x21px (최소 24px 권장)"
+                  },
+                  {
+                    "name": "텍스트 명암비(가독성)",
+                    "status": "PASS",
+                    "message": "대비 적절함 (18.26:1)"
+                  },
+                  {
+                    "name": "배경 대비 가시성",
+                    "status": "FAIL",
+                    "message": "배경과 구분이 잘 안됨: 1.15:1 (최소 3.0:1 권장)"
+                  }
+                ]
+              },
+              {
+                "element": {
+                  "tag": "a",
+                  "text": "Dashboard",
+                  "id": "",
+                  "class": "nav-link active",
+                  "type": "link"
+                },
+                "checks": [
+                  {
+                    "name": "표준 태그 사용",
+                    "status": "PASS",
+                    "message": "표준 태그 <a> 사용됨"
+                  },
+                  {
+                    "name": "마우스 커서 스타일",
+                    "status": "FAIL",
+                    "message": "커서가 'pointer'가 아님 ('default')"
+                  },
+                  {
+                    "name": "터치 타겟 크기",
+                    "status": "PASS",
+                    "message": "크기 적절함 (199x38px)"
+                  },
+                  {
+                    "name": "텍스트 명암비(가독성)",
+                    "status": "FAIL",
+                    "message": "대비가 낮음: 2.44:1 (최소 4.5:1 권장)"
+                  },
+                  {
+                    "name": "배경 대비 가시성",
+                    "status": "FAIL",
+                    "message": "배경과 구분이 잘 안됨: 2.32:1 (최소 3.0:1 권장)"
+                  }
+                ]
+              },
+              {
+                "element": {
+                  "tag": "a",
+                  "text": "Dashboard",
+                  "id": "",
+                  "class": "",
+                  "type": "link"
+                },
+                "checks": [
+                  {
+                    "name": "표준 태그 사용",
+                    "status": "PASS",
+                    "message": "표준 태그 <a> 사용됨"
+                  },
+                  {
+                    "name": "마우스 커서 스타일",
+                    "status": "PASS",
+                    "message": "커서 스타일 적절함"
+                  },
+                  {
+                    "name": "터치 타겟 크기",
+                    "status": "FAIL",
+                    "message": "크기가 너무 작음: 70x16px (최소 24px 권장)"
+                  },
+                  {
+                    "name": "텍스트 명암비(가독성)",
+                    "status": "FAIL",
+                    "message": "대비가 낮음: 3.62:1 (최소 4.5:1 권장) (투명 배경, 부모 배경색 기준)"
+                  }
+                ]
+              }
+            ]
+          },
+          "efficiency": {
+            "score": 100.0,
+            "items": []
+          },
+          "control": {
+            "score": 100.0,
+            "items": [
+              {
+                "element": {
+                  "tag": "h2",
+                  "text": "Phase 1: First Impression",
+                  "id": "",
+                  "class": "",
+                  "type": "heading"
+                },
+                "checks": [
+                  {
+                    "name": "페이지 제목(Heading)",
+                    "status": "PASS",
+                    "message": "헤딩 존재함: 'Phase 1: First Impression'"
+                  }
+                ]
+              },
+              {
+                "element": {
+                  "tag": "nav",
+                  "text": "Dashboard\nPhase 1: Analyze",
+                  "id": "",
+                  "class": "",
+                  "type": "nav"
+                },
+                "checks": [
+                  {
+                    "name": "이동 경로(Breadcrumb)",
+                    "status": "PASS",
+                    "message": "Breadcrumb 제공됨"
+                  }
+                ]
+              },
+              {
+                "element": {
+                  "tag": "Page",
+                  "text": "Global Check",
+                  "type": "page"
+                },
+                "checks": [
+                  {
+                    "name": "이동 경로(Breadcrumb)",
+                    "status": "PASS",
+                    "message": "Breadcrumb 제공됨"
+                  }
+                ]
+              }
+            ]
+          },
+          "node_id": null
+        }
+      },
+      {
+        "node_id": "9be5ce4f-52ec-4a41-aa0b-c25a35321f40",
+        "url": "https://testbedpage.vercel.app/lost_page",
+        "result": {
+          "url": "https://testbedpage.vercel.app/lost_page",
+          "learnability": {
+            "score": 81.2,
+            "items": [
+              {
+                "element": {
+                  "tag": "button",
+                  "text": "Logout",
+                  "id": "",
+                  "class": "logout-btn",
+                  "type": "button"
+                },
+                "checks": [
+                  {
+                    "name": "표준 태그 사용",
+                    "status": "PASS",
+                    "message": "표준 태그 <button> 사용됨"
+                  },
+                  {
+                    "name": "레이블(텍스트) 제공",
+                    "status": "PASS",
+                    "message": "레이블 존재함"
+                  },
+                  {
+                    "name": "마우스 커서 스타일",
+                    "status": "PASS",
+                    "message": "커서 스타일 적절함"
+                  },
+                  {
+                    "name": "터치 타겟 크기",
+                    "status": "PASS",
+                    "message": "크기 적절함 (64x27px)"
+                  },
+                  {
+                    "name": "텍스트 명암비(가독성)",
+                    "status": "PASS",
+                    "message": "대비 적절함 (4.53:1)"
+                  },
+                  {
+                    "name": "배경 대비 가시성",
+                    "status": "PASS",
+                    "message": "배경과 구분 명확함"
+                  }
+                ]
+              },
+              {
+                "element": {
+                  "tag": "button",
+                  "text": "Back",
+                  "id": "",
+                  "class": "",
+                  "type": "button"
+                },
+                "checks": [
+                  {
+                    "name": "표준 태그 사용",
+                    "status": "PASS",
+                    "message": "표준 태그 <button> 사용됨"
+                  },
+                  {
+                    "name": "레이블(텍스트) 제공",
+                    "status": "PASS",
+                    "message": "레이블 존재함"
+                  },
+                  {
+                    "name": "마우스 커서 스타일",
+                    "status": "FAIL",
+                    "message": "커서가 'pointer'가 아님 ('default')"
+                  },
+                  {
+                    "name": "터치 타겟 크기",
+                    "status": "FAIL",
+                    "message": "크기가 너무 작음: 45x21px (최소 24px 권장)"
+                  },
+                  {
+                    "name": "텍스트 명암비(가독성)",
+                    "status": "PASS",
+                    "message": "대비 적절함 (18.26:1)"
+                  },
+                  {
+                    "name": "배경 대비 가시성",
+                    "status": "FAIL",
+                    "message": "배경과 구분이 잘 안됨: 1.05:1 (최소 3.0:1 권장)"
+                  }
+                ]
+              },
+              {
+                "element": {
+                  "tag": "a",
+                  "text": "Dashboard",
+                  "id": "",
+                  "class": "nav-link",
+                  "type": "link"
+                },
+                "checks": [
+                  {
+                    "name": "표준 태그 사용",
+                    "status": "PASS",
+                    "message": "표준 태그 <a> 사용됨"
+                  },
+                  {
+                    "name": "마우스 커서 스타일",
+                    "status": "PASS",
+                    "message": "커서 스타일 적절함"
+                  },
+                  {
+                    "name": "터치 타겟 크기",
+                    "status": "PASS",
+                    "message": "크기 적절함 (199x38px)"
+                  },
+                  {
+                    "name": "텍스트 명암비(가독성)",
+                    "status": "PASS",
+                    "message": "대비 적절함 (11.99:1) (투명 배경, 부모 배경색 기준)"
+                  }
+                ]
+              }
+            ]
+          },
+          "efficiency": {
+            "score": 100.0,
+            "items": []
+          },
+          "control": {
+            "score": 0.0,
+            "items": [
+              {
+                "element": {
+                  "tag": "Page",
+                  "text": "Global Check",
+                  "type": "page"
+                },
+                "checks": [
+                  {
+                    "name": "이동 경로(Breadcrumb)",
+                    "status": "FAIL",
+                    "message": "Breadcrumb(이동 경로)가 제공되지 않음"
+                  }
+                ]
+              }
+            ]
+          },
+          "node_id": null
+        }
+      }
+    ],
+    "transition_analysis": [
+      {
+        "edge_id": "6bc9cd17-5214-4c2c-911a-f65d1741014b",
+        "action": "click on role=button name=Logout",
+        "result": {
+          "learnability": {
+            "score": 100.0,
+            "passed": [],
+            "failed": []
+          },
+          "efficiency": {
+            "score": 0.0,
+            "passed": [],
+            "failed": [
+              {
+                "check": "System Latency",
+                "message": "지연 시간(1067ms)이 1초 이상으로 느립니다."
+              }
+            ],
+            "latency": {
+              "duration_ms": 1067,
+              "status": "Slow",
+              "description": "반응이 느립니다 (1067ms). 사용자가 기다려야 하는 이유를 알 수 있는 로딩 UI나 진행 상태 표시가 필요합니다."
+            }
+          },
+          "control": {
+            "score": 0.0,
+            "passed": [],
+            "failed": [
+              {
+                "check": "Visibility of Status",
+                "message": "작업 시간이 길었음에도 '처리 중'임을 나타내는 명확한 지표(로딩 등)를 찾기 어렵습니다."
+              }
+            ]
+          }
+        }
+      },
+      {
+        "edge_id": "1960e97e-f744-4ec6-88ff-70352e93dedc",
+        "action": "click on role=button name=Start Phase 1",
+        "result": {
+          "learnability": {
+            "score": 100.0,
+            "passed": [],
+            "failed": []
+          },
+          "efficiency": {
+            "score": 0.0,
+            "passed": [],
+            "failed": [
+              {
+                "check": "System Latency",
+                "message": "지연 시간(1082ms)이 1초 이상으로 느립니다."
+              }
+            ],
+            "latency": {
+              "duration_ms": 1082,
+              "status": "Slow",
+              "description": "반응이 느립니다 (1082ms). 사용자가 기다려야 하는 이유를 알 수 있는 로딩 UI나 진행 상태 표시가 필요합니다."
+            }
+          },
+          "control": {
+            "score": 0.0,
+            "passed": [],
+            "failed": [
+              {
+                "check": "Visibility of Status",
+                "message": "작업 시간이 길었음에도 '처리 중'임을 나타내는 명확한 지표(로딩 등)를 찾기 어렵습니다."
+              }
+            ]
+          }
+        }
+      },
+      {
+        "edge_id": "7b3b0ee9-e4cd-4f0f-b50b-d7188e181376",
+        "action": "click on role=link name=Dashboard",
+        "result": {
+          "learnability": {
+            "score": 100.0,
+            "passed": [],
+            "failed": []
+          },
+          "efficiency": {
+            "score": 0.0,
+            "passed": [],
+            "failed": [
+              {
+                "check": "System Latency",
+                "message": "지연 시간(1677ms)이 1초 이상으로 느립니다."
+              }
+            ],
+            "latency": {
+              "duration_ms": 1677,
+              "status": "Slow",
+              "description": "반응이 느립니다 (1677ms). 사용자가 기다려야 하는 이유를 알 수 있는 로딩 UI나 진행 상태 표시가 필요합니다."
+            }
+          },
+          "control": {
+            "score": 0.0,
+            "passed": [],
+            "failed": [
+              {
+                "check": "Visibility of Status",
+                "message": "작업 시간이 길었음에도 '처리 중'임을 나타내는 명확한 지표(로딩 등)를 찾기 어렵습니다."
+              }
+            ]
+          }
+        }
+      },
+      {
+        "edge_id": "95fc73dd-8fb0-4c01-9a62-632f11a17780",
+        "action": "hover on role=link name=Dashboard",
+        "result": {
+          "learnability": {
+            "score": 100.0,
+            "passed": [],
+            "failed": []
+          },
+          "efficiency": {
+            "score": 100.0,
+            "passed": [
+              {
+                "check": "System Latency",
+                "message": "지연 시간(463ms)이 1초 미만으로 양호합니다."
+              }
+            ],
+            "failed": [],
+            "latency": {
+              "duration_ms": 463,
+              "status": "Good",
+              "description": "반응이 양호합니다 (1초 미만). 사용자의 사고 흐름이 끊기지 않습니다."
+            }
+          },
+          "control": {
+            "score": 100.0,
+            "passed": [
+              {
+                "check": "Visibility of Status",
+                "message": "작업이 신속히 처리되어 즉각적으로 상태가 전환되었습니다."
+              }
+            ],
+            "failed": []
+          }
+        }
+      },
+      {
+        "edge_id": "a408656b-4e04-4126-aabb-a2a60b56c45b",
+        "action": "click on role=button name=Logout",
+        "result": {
+          "learnability": {
+            "score": 100.0,
+            "passed": [],
+            "failed": []
+          },
+          "efficiency": {
+            "score": 0.0,
+            "passed": [],
+            "failed": [
+              {
+                "check": "System Latency",
+                "message": "지연 시간(1102ms)이 1초 이상으로 느립니다."
+              }
+            ],
+            "latency": {
+              "duration_ms": 1102,
+              "status": "Slow",
+              "description": "반응이 느립니다 (1102ms). 사용자가 기다려야 하는 이유를 알 수 있는 로딩 UI나 진행 상태 표시가 필요합니다."
+            }
+          },
+          "control": {
+            "score": 0.0,
+            "passed": [],
+            "failed": [
+              {
+                "check": "Visibility of Status",
+                "message": "작업 시간이 길었음에도 '처리 중'임을 나타내는 명확한 지표(로딩 등)를 찾기 어렵습니다."
+              }
+            ]
+          }
+        }
+      },
+      {
+        "edge_id": "ce33cab3-0157-4ec6-87b1-3dcc2b51fcee",
+        "action": "click on role=button name=Low Contrast BG",
+        "result": {
+          "learnability": {
+            "score": 100.0,
+            "passed": [],
+            "failed": []
+          },
+          "efficiency": {
+            "score": 0.0,
+            "passed": [],
+            "failed": [
+              {
+                "check": "System Latency",
+                "message": "지연 시간(1032ms)이 1초 이상으로 느립니다."
+              }
+            ],
+            "latency": {
+              "duration_ms": 1032,
+              "status": "Slow",
+              "description": "반응이 느립니다 (1032ms). 사용자가 기다려야 하는 이유를 알 수 있는 로딩 UI나 진행 상태 표시가 필요합니다."
+            }
+          },
+          "control": {
+            "score": 0.0,
+            "passed": [],
+            "failed": [
+              {
+                "check": "Visibility of Status",
+                "message": "작업 시간이 길었음에도 '처리 중'임을 나타내는 명확한 지표(로딩 등)를 찾기 어렵습니다."
+              }
+            ]
+          }
+        }
+      },
+      {
+        "edge_id": "d512b71d-37de-4c38-9f4e-9aeafbf7ddeb",
+        "action": "click on role=button name=Low Contrast Text",
+        "result": {
+          "learnability": {
+            "score": 100.0,
+            "passed": [],
+            "failed": []
+          },
+          "efficiency": {
+            "score": 0.0,
+            "passed": [],
+            "failed": [
+              {
+                "check": "System Latency",
+                "message": "지연 시간(1026ms)이 1초 이상으로 느립니다."
+              }
+            ],
+            "latency": {
+              "duration_ms": 1026,
+              "status": "Slow",
+              "description": "반응이 느립니다 (1026ms). 사용자가 기다려야 하는 이유를 알 수 있는 로딩 UI나 진행 상태 표시가 필요합니다."
+            }
+          },
+          "control": {
+            "score": 0.0,
+            "passed": [],
+            "failed": [
+              {
+                "check": "Visibility of Status",
+                "message": "작업 시간이 길었음에도 '처리 중'임을 나타내는 명확한 지표(로딩 등)를 찾기 어렵습니다."
+              }
+            ]
+          }
+        }
+      },
+      {
+        "edge_id": "5de05a08-5730-47fb-8dc3-caf3020bfa09",
+        "action": "click on role=button name=Go to 'No Breadcrumb' Page",
+        "result": {
+          "learnability": {
+            "score": 100.0,
+            "passed": [],
+            "failed": []
+          },
+          "efficiency": {
+            "score": 0.0,
+            "passed": [],
+            "failed": [
+              {
+                "check": "System Latency",
+                "message": "지연 시간(1026ms)이 1초 이상으로 느립니다."
+              }
+            ],
+            "latency": {
+              "duration_ms": 1026,
+              "status": "Slow",
+              "description": "반응이 느립니다 (1026ms). 사용자가 기다려야 하는 이유를 알 수 있는 로딩 UI나 진행 상태 표시가 필요합니다."
+            }
+          },
+          "control": {
+            "score": 0.0,
+            "passed": [],
+            "failed": [
+              {
+                "check": "Visibility of Status",
+                "message": "작업 시간이 길었음에도 '처리 중'임을 나타내는 명확한 지표(로딩 등)를 찾기 어렵습니다."
+              }
+            ]
+          }
+        }
+      },
+      {
+        "edge_id": "e9ed06b0-b7dd-428a-bbba-baacde36bad1",
+        "action": "click on role=link name=Dashboard",
+        "result": {
+          "learnability": {
+            "score": 100.0,
+            "passed": [],
+            "failed": []
+          },
+          "efficiency": {
+            "score": 0.0,
+            "passed": [],
+            "failed": [
+              {
+                "check": "System Latency",
+                "message": "지연 시간(1034ms)이 1초 이상으로 느립니다."
+              }
+            ],
+            "latency": {
+              "duration_ms": 1034,
+              "status": "Slow",
+              "description": "반응이 느립니다 (1034ms). 사용자가 기다려야 하는 이유를 알 수 있는 로딩 UI나 진행 상태 표시가 필요합니다."
+            }
+          },
+          "control": {
+            "score": 0.0,
+            "passed": [],
+            "failed": [
+              {
+                "check": "Visibility of Status",
+                "message": "작업 시간이 길었음에도 '처리 중'임을 나타내는 명확한 지표(로딩 등)를 찾기 어렵습니다."
+              }
+            ]
+          }
+        }
+      },
+      {
+        "edge_id": "317722ba-911d-4399-9c88-9666ee935a71",
+        "action": "hover on role=link name=Dashboard",
+        "result": {
+          "learnability": {
+            "score": 100.0,
+            "passed": [],
+            "failed": []
+          },
+          "efficiency": {
+            "score": 100.0,
+            "passed": [
+              {
+                "check": "System Latency",
+                "message": "지연 시간(457ms)이 1초 미만으로 양호합니다."
+              }
+            ],
+            "failed": [],
+            "latency": {
+              "duration_ms": 457,
+              "status": "Good",
+              "description": "반응이 양호합니다 (1초 미만). 사용자의 사고 흐름이 끊기지 않습니다."
+            }
+          },
+          "control": {
+            "score": 100.0,
+            "passed": [
+              {
+                "check": "Visibility of Status",
+                "message": "작업이 신속히 처리되어 즉각적으로 상태가 전환되었습니다."
+              }
+            ],
+            "failed": []
+          }
+        }
+      },
+      {
+        "edge_id": "3197bce6-95d9-4b27-8689-c92a0cadc16c",
+        "action": "click on role=button name=Logout",
+        "result": {
+          "learnability": {
+            "score": 100.0,
+            "passed": [],
+            "failed": []
+          },
+          "efficiency": {
+            "score": 0.0,
+            "passed": [],
+            "failed": [
+              {
+                "check": "System Latency",
+                "message": "지연 시간(1114ms)이 1초 이상으로 느립니다."
+              }
+            ],
+            "latency": {
+              "duration_ms": 1114,
+              "status": "Slow",
+              "description": "반응이 느립니다 (1114ms). 사용자가 기다려야 하는 이유를 알 수 있는 로딩 UI나 진행 상태 표시가 필요합니다."
+            }
+          },
+          "control": {
+            "score": 0.0,
+            "passed": [],
+            "failed": [
+              {
+                "check": "Visibility of Status",
+                "message": "작업 시간이 길었음에도 '처리 중'임을 나타내는 명확한 지표(로딩 등)를 찾기 어렵습니다."
+              }
+            ]
+          }
+        }
+      },
+      {
+        "edge_id": "9ce8295d-95d4-4db9-a4cb-c48853ca1015",
+        "action": "click on role=button name=Back",
+        "result": {
+          "learnability": {
+            "score": 100.0,
+            "passed": [],
+            "failed": []
+          },
+          "efficiency": {
+            "score": 0.0,
+            "passed": [],
+            "failed": [
+              {
+                "check": "System Latency",
+                "message": "지연 시간(1108ms)이 1초 이상으로 느립니다."
+              }
+            ],
+            "latency": {
+              "duration_ms": 1108,
+              "status": "Slow",
+              "description": "반응이 느립니다 (1108ms). 사용자가 기다려야 하는 이유를 알 수 있는 로딩 UI나 진행 상태 표시가 필요합니다."
+            }
+          },
+          "control": {
+            "score": 0.0,
+            "passed": [],
+            "failed": [
+              {
+                "check": "Visibility of Status",
+                "message": "작업 시간이 길었음에도 '처리 중'임을 나타내는 명확한 지표(로딩 등)를 찾기 어렵습니다."
+              }
+            ]
+          }
+        }
+      },
+      {
+        "edge_id": "30b27796-3d44-48e1-9409-3ca72f589e97",
+        "action": "click on role=link name=Dashboard",
+        "result": {
+          "learnability": {
+            "score": 100.0,
+            "passed": [],
+            "failed": []
+          },
+          "efficiency": {
+            "score": 0.0,
+            "passed": [],
+            "failed": [
+              {
+                "check": "System Latency",
+                "message": "지연 시간(1405ms)이 1초 이상으로 느립니다."
+              }
+            ],
+            "latency": {
+              "duration_ms": 1405,
+              "status": "Slow",
+              "description": "반응이 느립니다 (1405ms). 사용자가 기다려야 하는 이유를 알 수 있는 로딩 UI나 진행 상태 표시가 필요합니다."
+            }
+          },
+          "control": {
+            "score": 0.0,
+            "passed": [],
+            "failed": [
+              {
+                "check": "Visibility of Status",
+                "message": "작업 시간이 길었음에도 '처리 중'임을 나타내는 명확한 지표(로딩 등)를 찾기 어렵습니다."
+              }
+            ]
+          }
+        }
+      },
+      {
+        "edge_id": "affdac26-ae34-4362-929a-2c974498f236",
+        "action": "hover on role=link name=Dashboard",
+        "result": {
+          "learnability": {
+            "score": 100.0,
+            "passed": [],
+            "failed": []
+          },
+          "efficiency": {
+            "score": 100.0,
+            "passed": [
+              {
+                "check": "System Latency",
+                "message": "지연 시간(460ms)이 1초 미만으로 양호합니다."
+              }
+            ],
+            "failed": [],
+            "latency": {
+              "duration_ms": 460,
+              "status": "Good",
+              "description": "반응이 양호합니다 (1초 미만). 사용자의 사고 흐름이 끊기지 않습니다."
+            }
+          },
+          "control": {
+            "score": 100.0,
+            "passed": [
+              {
+                "check": "Visibility of Status",
+                "message": "작업이 신속히 처리되어 즉각적으로 상태가 전환되었습니다."
+              }
+            ],
+            "failed": []
+          }
+        }
+      }
+    ],
+    "workflow_analysis": [
+      {
+        "path_index": 0,
+        "path_summary": "5e97e5d1 -> 520cbaa0 -> 5e97e5d1",
+        "result": {
+          "learnability": {
+            "score": 100.0,
+            "passed": [],
+            "failed": []
+          },
+          "efficiency": {
+            "score": 100.0,
+            "passed": [
+              {
+                "check": "Workflow Efficiency",
+                "message": "전체 예상 작업 시간(5.1초)이 짧고 효율적입니다."
+              }
+            ],
+            "failed": [],
+            "interaction_efficiency": {
+              "klm_breakdown": [
+                {
+                  "step": 0,
+                  "action": "click",
+                  "ops": [
+                    "M",
+                    "P",
+                    "B"
+                  ],
+                  "est_time": 2.55
+                },
+                {
+                  "step": 1,
+                  "action": "click",
+                  "ops": [
+                    "M",
+                    "P",
+                    "B"
+                  ],
+                  "est_time": 2.55
+                }
+              ],
+              "total_estimated_time_s": 5.1
+            },
+            "target_size_spacing": {
+              "size_issues": [
+                {
+                  "step": 0,
+                  "target": "role=button name=Start Phase 1",
+                  "size": "96.78125x21",
+                  "message": "목표가 너무 작아(<32px) 정확하게 클릭하기 어렵습니다."
+                }
+              ],
+              "fitts_issues": [
+                {
+                  "step": 0,
+                  "target": "role=button name=Start Phase 1",
+                  "distance": 661.1,
+                  "width": 21,
+                  "ID": 5.02,
+                  "message": "높은 난이도 지수 (먼 거리 또는 작은 목표)."
+                },
+                {
+                  "step": 1,
+                  "target": "role=link name=Dashboard",
+                  "distance": 326.2,
+                  "width": 38,
+                  "ID": 3.26,
+                  "message": "높은 난이도 지수 (먼 거리 또는 작은 목표)."
+                }
+              ]
+            }
+          },
+          "control": {
+            "score": 100.0,
+            "passed": [],
+            "failed": []
+          }
+        }
+      },
+      {
+        "path_index": 1,
+        "path_summary": "5e97e5d1 -> 520cbaa0 -> 9be5ce4f -> 5e97e5d1",
+        "result": {
+          "learnability": {
+            "score": 100.0,
+            "passed": [],
+            "failed": []
+          },
+          "efficiency": {
+            "score": 100.0,
+            "passed": [
+              {
+                "check": "Workflow Efficiency",
+                "message": "전체 예상 작업 시간(7.65초)이 짧고 효율적입니다."
+              }
+            ],
+            "failed": [],
+            "interaction_efficiency": {
+              "klm_breakdown": [
+                {
+                  "step": 0,
+                  "action": "click",
+                  "ops": [
+                    "M",
+                    "P",
+                    "B"
+                  ],
+                  "est_time": 2.55
+                },
+                {
+                  "step": 1,
+                  "action": "click",
+                  "ops": [
+                    "M",
+                    "P",
+                    "B"
+                  ],
+                  "est_time": 2.55
+                },
+                {
+                  "step": 2,
+                  "action": "click",
+                  "ops": [
+                    "M",
+                    "P",
+                    "B"
+                  ],
+                  "est_time": 2.55
+                }
+              ],
+              "total_estimated_time_s": 7.65
+            },
+            "target_size_spacing": {
+              "size_issues": [
+                {
+                  "step": 0,
+                  "target": "role=button name=Start Phase 1",
+                  "size": "96.78125x21",
+                  "message": "목표가 너무 작아(<32px) 정확하게 클릭하기 어렵습니다."
+                },
+                {
+                  "step": 1,
+                  "target": "role=button name=Go to 'No Breadcrumb' Page",
+                  "size": "185.59375x21",
+                  "message": "목표가 너무 작아(<32px) 정확하게 클릭하기 어렵습니다."
+                }
+              ],
+              "fitts_issues": [
+                {
+                  "step": 0,
+                  "target": "role=button name=Start Phase 1",
+                  "distance": 661.1,
+                  "width": 21,
+                  "ID": 5.02,
+                  "message": "높은 난이도 지수 (먼 거리 또는 작은 목표)."
+                },
+                {
+                  "step": 2,
+                  "target": "role=link name=Dashboard",
+                  "distance": 429.5,
+                  "width": 38,
+                  "ID": 3.62,
+                  "message": "높은 난이도 지수 (먼 거리 또는 작은 목표)."
+                }
+              ]
+            }
+          },
+          "control": {
+            "score": 100.0,
+            "passed": [],
+            "failed": []
+          }
+        }
+      },
+      {
+        "path_index": 2,
+        "path_summary": "5e97e5d1 -> 520cbaa0 -> 9be5ce4f -> 520cbaa0",
+        "result": {
+          "learnability": {
+            "score": 100.0,
+            "passed": [],
+            "failed": []
+          },
+          "efficiency": {
+            "score": 100.0,
+            "passed": [
+              {
+                "check": "Workflow Efficiency",
+                "message": "전체 예상 작업 시간(7.65초)이 짧고 효율적입니다."
+              }
+            ],
+            "failed": [],
+            "interaction_efficiency": {
+              "klm_breakdown": [
+                {
+                  "step": 0,
+                  "action": "click",
+                  "ops": [
+                    "M",
+                    "P",
+                    "B"
+                  ],
+                  "est_time": 2.55
+                },
+                {
+                  "step": 1,
+                  "action": "click",
+                  "ops": [
+                    "M",
+                    "P",
+                    "B"
+                  ],
+                  "est_time": 2.55
+                },
+                {
+                  "step": 2,
+                  "action": "click",
+                  "ops": [
+                    "M",
+                    "P",
+                    "B"
+                  ],
+                  "est_time": 2.55
+                }
+              ],
+              "total_estimated_time_s": 7.65
+            },
+            "target_size_spacing": {
+              "size_issues": [
+                {
+                  "step": 0,
+                  "target": "role=button name=Start Phase 1",
+                  "size": "96.78125x21",
+                  "message": "목표가 너무 작아(<32px) 정확하게 클릭하기 어렵습니다."
+                },
+                {
+                  "step": 1,
+                  "target": "role=button name=Go to 'No Breadcrumb' Page",
+                  "size": "185.59375x21",
+                  "message": "목표가 너무 작아(<32px) 정확하게 클릭하기 어렵습니다."
+                },
+                {
+                  "step": 2,
+                  "target": "role=button name=Back",
+                  "size": "45.640625x21",
+                  "message": "목표가 너무 작아(<32px) 정확하게 클릭하기 어렵습니다."
+                }
+              ],
+              "fitts_issues": [
+                {
+                  "step": 0,
+                  "target": "role=button name=Start Phase 1",
+                  "distance": 661.1,
+                  "width": 21,
+                  "ID": 5.02,
+                  "message": "높은 난이도 지수 (먼 거리 또는 작은 목표)."
+                },
+                {
+                  "step": 2,
+                  "target": "role=button name=Back",
+                  "distance": 330.3,
+                  "width": 21,
+                  "ID": 4.06,
+                  "message": "높은 난이도 지수 (먼 거리 또는 작은 목표)."
+                }
+              ]
+            }
+          },
+          "control": {
+            "score": 100.0,
+            "passed": [],
+            "failed": []
+          }
+        }
+      }
+    ]
+  }
+}

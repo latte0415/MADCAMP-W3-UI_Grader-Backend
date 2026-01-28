@@ -56,9 +56,55 @@ async def start_graph_building(run_id: UUID, start_url: str) -> None:
         
         # 3. 첫 워커 생성: process_node_worker에 run_id, node_id 전달
         logger.info(f"[3/3] 첫 워커 생성 중: node_id={first_node_id}")
+        # #region agent log
+        try:
+            import json
+            import time
+            import os
+            log_path = "/Users/laxogud/MADCAMP/W3/backend/.cursor/debug.log"
+            os.makedirs(os.path.dirname(log_path), exist_ok=True)
+            log_entry = {
+                "sessionId": "debug-session",
+                "runId": "current",
+                "hypothesisId": "GRAPH_START",
+                "location": f"{__file__}:{58}",
+                "message": "첫 워커 생성 시도",
+                "data": {"run_id": str(run_id), "first_node_id": str(first_node_id)},
+                "timestamp": int(time.time() * 1000)
+            }
+            with open(log_path, "a", encoding="utf-8") as f:
+                f.write(json.dumps(log_entry, ensure_ascii=False) + "\n")
+                f.flush()
+                os.fsync(f.fileno())
+        except Exception:
+            pass
+        # #endregion
         message = process_node_worker.send(str(run_id), str(first_node_id))
         message_id = message.message_id if hasattr(message, 'message_id') else 'unknown'
         logger.info(f"[3/3] 워커 메시지 전송 완료: message_id={message_id}")
+        # #region agent log
+        try:
+            import json
+            import time
+            import os
+            log_path = "/Users/laxogud/MADCAMP/W3/backend/.cursor/debug.log"
+            os.makedirs(os.path.dirname(log_path), exist_ok=True)
+            log_entry = {
+                "sessionId": "debug-session",
+                "runId": "current",
+                "hypothesisId": "GRAPH_START",
+                "location": f"{__file__}:{75}",
+                "message": "첫 워커 생성 완료",
+                "data": {"run_id": str(run_id), "first_node_id": str(first_node_id), "message_id": message_id},
+                "timestamp": int(time.time() * 1000)
+            }
+            with open(log_path, "a", encoding="utf-8") as f:
+                f.write(json.dumps(log_entry, ensure_ascii=False) + "\n")
+                f.flush()
+                os.fsync(f.fileno())
+        except Exception:
+            pass
+        # #endregion
         logger.info(f"[3/3] ⚠️  워커 프로세스가 실행 중인지 확인하세요: python -m workers.worker")
         logger.info(f"[3/3] 첫 워커 생성 완료 - 그래프 구축 프로세스 시작됨")
         
