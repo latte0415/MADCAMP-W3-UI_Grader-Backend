@@ -1,0 +1,152 @@
+{
+  "run_id": "aa9ecae8-8fd3-47ed-9805-c8818f0fd16d",
+  "exported_at": "2026-01-28T05:23:28.756627Z",
+  "summary": {
+    "node_count": 2,
+    "edge_count": 4,
+    "success_edge_count": 1,
+    "fail_edge_count": 3
+  },
+  "nodes": [
+    {
+      "id": "ba21f5a3-b8c8-4e0c-80e8-85d5f1a2ea49",
+      "run_id": "aa9ecae8-8fd3-47ed-9805-c8818f0fd16d",
+      "url": "https://testbedpage.vercel.app/",
+      "url_normalized": "https://testbedpage.vercel.app/",
+      "a11y_hash": "bf485ea586f2f7b6b7cbea89d36ae85c4d2f3464cd3156887701fcf07950041e",
+      "content_dom_hash": "beae93e0944fd2985f7df76b3151feab90b1a75fbeb772e139c290960845a286",
+      "state_hash": "0bb750b7c8d9a85ba49cc66c19621cea51312a951bf2c747a92de1edd2c3eee9",
+      "auth_state": {
+        "plan": null,
+        "tenant": null,
+        "has_token": false,
+        "user_role": null,
+        "is_logged_in": false
+      },
+      "storage_fingerprint": {
+        "local_keys": [],
+        "session_keys": [],
+        "hashed_values": {}
+      },
+      "dom_snapshot_ref": "ui-artifacts/runs/aa9ecae8-8fd3-47ed-9805-c8818f0fd16d/nodes/ba21f5a3-b8c8-4e0c-80e8-85d5f1a2ea49/dom_snapshot.html",
+      "a11y_snapshot_ref": "ui-artifacts/runs/aa9ecae8-8fd3-47ed-9805-c8818f0fd16d/nodes/ba21f5a3-b8c8-4e0c-80e8-85d5f1a2ea49/a11y_snapshot.json",
+      "screenshot_ref": "ui-artifacts/runs/aa9ecae8-8fd3-47ed-9805-c8818f0fd16d/nodes/ba21f5a3-b8c8-4e0c-80e8-85d5f1a2ea49/screenshot.png",
+      "storage_ref": "ui-artifacts/runs/aa9ecae8-8fd3-47ed-9805-c8818f0fd16d/nodes/ba21f5a3-b8c8-4e0c-80e8-85d5f1a2ea49/storage_state.json",
+      "created_at": "2026-01-28T05:20:02.326759+00:00",
+      "route_depth": 0,
+      "modal_depth": 0,
+      "interaction_depth": 0,
+      "css_snapshot_ref": "ui-artifacts/runs/aa9ecae8-8fd3-47ed-9805-c8818f0fd16d/nodes/ba21f5a3-b8c8-4e0c-80e8-85d5f1a2ea49/styles.css",
+      "input_state_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "id": "e6f81085-4bf3-4836-994f-9e9cf48f2e2f",
+      "run_id": "aa9ecae8-8fd3-47ed-9805-c8818f0fd16d",
+      "url": "https://testbedpage.vercel.app/phase1_analyze",
+      "url_normalized": "https://testbedpage.vercel.app/phase1_analyze",
+      "a11y_hash": "8643d311ce240ae13827f7a3fa4597085f517bc3ab86537f13627d518b210d6b",
+      "content_dom_hash": "d9d2dc60bf050396d0f095bda16dac7cf82567faa5bc31666976cddb738d4e49",
+      "state_hash": "0bb750b7c8d9a85ba49cc66c19621cea51312a951bf2c747a92de1edd2c3eee9",
+      "auth_state": {
+        "plan": null,
+        "tenant": null,
+        "has_token": false,
+        "user_role": null,
+        "is_logged_in": false
+      },
+      "storage_fingerprint": {
+        "local_keys": [],
+        "session_keys": [],
+        "hashed_values": {}
+      },
+      "dom_snapshot_ref": "ui-artifacts/runs/aa9ecae8-8fd3-47ed-9805-c8818f0fd16d/nodes/e6f81085-4bf3-4836-994f-9e9cf48f2e2f/dom_snapshot.html",
+      "a11y_snapshot_ref": "ui-artifacts/runs/aa9ecae8-8fd3-47ed-9805-c8818f0fd16d/nodes/e6f81085-4bf3-4836-994f-9e9cf48f2e2f/a11y_snapshot.json",
+      "screenshot_ref": "ui-artifacts/runs/aa9ecae8-8fd3-47ed-9805-c8818f0fd16d/nodes/e6f81085-4bf3-4836-994f-9e9cf48f2e2f/screenshot.png",
+      "storage_ref": "ui-artifacts/runs/aa9ecae8-8fd3-47ed-9805-c8818f0fd16d/nodes/e6f81085-4bf3-4836-994f-9e9cf48f2e2f/storage_state.json",
+      "created_at": "2026-01-28T05:20:29.693692+00:00",
+      "route_depth": 1,
+      "modal_depth": 0,
+      "interaction_depth": 0,
+      "css_snapshot_ref": "ui-artifacts/runs/aa9ecae8-8fd3-47ed-9805-c8818f0fd16d/nodes/e6f81085-4bf3-4836-994f-9e9cf48f2e2f/styles.css",
+      "input_state_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "edges": [
+    {
+      "id": "5ea1676f-80f8-4254-8cd3-5db304c4710f",
+      "run_id": "aa9ecae8-8fd3-47ed-9805-c8818f0fd16d",
+      "from_node_id": "ba21f5a3-b8c8-4e0c-80e8-85d5f1a2ea49",
+      "to_node_id": null,
+      "action_type": "hover",
+      "action_target": "role=link name=Dashboard",
+      "action_value": "",
+      "cost": 1,
+      "latency_ms": 472,
+      "outcome": "fail",
+      "error_msg": "액션 실행 후 같은 노드로 돌아옴",
+      "intent_label": null,
+      "intent_confidence": null,
+      "dom_diff_ref": null,
+      "network_summary_ref": null,
+      "created_at": "2026-01-28T05:20:24.823806+00:00",
+      "depth_diff_type": "same_node"
+    },
+    {
+      "id": "78c26b6a-9de2-4a46-acd9-050e51693248",
+      "run_id": "aa9ecae8-8fd3-47ed-9805-c8818f0fd16d",
+      "from_node_id": "ba21f5a3-b8c8-4e0c-80e8-85d5f1a2ea49",
+      "to_node_id": null,
+      "action_type": "click",
+      "action_target": "role=button name=Logout",
+      "action_value": "",
+      "cost": 1,
+      "latency_ms": 1064,
+      "outcome": "fail",
+      "error_msg": "액션 실행 후 같은 노드로 돌아옴",
+      "intent_label": null,
+      "intent_confidence": null,
+      "dom_diff_ref": null,
+      "network_summary_ref": null,
+      "created_at": "2026-01-28T05:20:29.690855+00:00",
+      "depth_diff_type": "same_node"
+    },
+    {
+      "id": "9bacb43a-90f9-4bf5-a975-3ad25cebc2c6",
+      "run_id": "aa9ecae8-8fd3-47ed-9805-c8818f0fd16d",
+      "from_node_id": "ba21f5a3-b8c8-4e0c-80e8-85d5f1a2ea49",
+      "to_node_id": null,
+      "action_type": "click",
+      "action_target": "role=link name=Dashboard",
+      "action_value": "",
+      "cost": 1,
+      "latency_ms": 1601,
+      "outcome": "fail",
+      "error_msg": "액션 실행 후 같은 노드로 돌아옴",
+      "intent_label": null,
+      "intent_confidence": null,
+      "dom_diff_ref": null,
+      "network_summary_ref": null,
+      "created_at": "2026-01-28T05:20:30.461969+00:00",
+      "depth_diff_type": "same_node"
+    },
+    {
+      "id": "eb18d7be-0190-4dea-9c38-dfc56dd584f4",
+      "run_id": "aa9ecae8-8fd3-47ed-9805-c8818f0fd16d",
+      "from_node_id": "ba21f5a3-b8c8-4e0c-80e8-85d5f1a2ea49",
+      "to_node_id": "e6f81085-4bf3-4836-994f-9e9cf48f2e2f",
+      "action_type": "click",
+      "action_target": "role=button name=Start Phase 1",
+      "action_value": "",
+      "cost": 1,
+      "latency_ms": 1080,
+      "outcome": "success",
+      "error_msg": null,
+      "intent_label": "start_phase_1",
+      "intent_confidence": null,
+      "dom_diff_ref": null,
+      "network_summary_ref": null,
+      "created_at": "2026-01-28T05:20:31.722286+00:00",
+      "depth_diff_type": "new_page"
+    }
+  ]
+}

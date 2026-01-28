@@ -89,6 +89,38 @@ def _log(worker_type: str, run_id: UUID, message: str, level: str = "INFO"):
     log_level(message)
 
 
+def _check_run_status(run_id: UUID) -> Optional[str]:
+    """
+    Run 상태를 확인하고, 작업을 계속할 수 있는지 확인합니다.
+    
+    Args:
+        run_id: 탐색 세션 ID
+    
+    Returns:
+        run 상태 문자열. 작업을 계속할 수 없으면 None 반환
+    """
+    from repositories.run_repository import get_run_by_id
+    
+    run = get_run_by_id(run_id)
+    if not run:
+        logger.warning(f"Run을 찾을 수 없습니다: {run_id}")
+        return None
+    
+    status = run.get("status")
+    
+    # stopped, completed, failed 상태면 작업 중단
+    if status in ["stopped", "completed", "failed"]:
+        logger.info(f"Run 상태가 {status}이므로 작업을 중단합니다: {run_id}")
+        return None
+    
+    # running 상태만 작업 계속
+    if status != "running":
+        logger.warning(f"Run 상태가 예상과 다릅니다: status={status}, run_id={run_id}")
+        return None
+    
+    return status
+
+
 def _run_async(coro):
     """동기 함수에서 비동기 함수를 실행하는 헬퍼"""
     try:
@@ -117,6 +149,46 @@ async def _create_browser_context(storage_state: Optional[dict] = None):
         opts["storage_state"] = storage_state
     context = await browser.new_context(**opts)
     return playwright, browser, context
+
+
+async def safe_close_browser_resources(browser, playwright, context=None, worker_type: str = "UNKNOWN"):
+    """
+    브라우저, 컨텍스트, Playwright 리소스를 안전하게 종료합니다.
+    
+    워커가 강제 종료되거나 브라우저가 이미 종료된 상태에서도 예외 없이 리소스를 정리합니다.
+    
+    Args:
+        browser: Playwright Browser 객체 (None 가능)
+        playwright: Playwright 객체 (None 가능)
+        context: BrowserContext 객체 (None 가능)
+        worker_type: 워커 타입 (로깅용, 예: "NODE", "ACTION")
+    """
+    # Context 종료 (가장 먼저)
+    if context:
+        try:
+            await context.close()
+        except Exception as e:
+            logger.debug(f"[{worker_type}] 컨텍스트 종료 중 예외 (무시): {e}")
+    
+    # Browser 종료
+    if browser:
+        try:
+            # 브라우저가 이미 종료되었는지 확인
+            if hasattr(browser, 'is_connected'):
+                if browser.is_connected():
+                    await browser.close()
+            else:
+                # is_connected 속성이 없는 경우 그냥 시도
+                await browser.close()
+        except Exception as e:
+            logger.debug(f"[{worker_type}] 브라우저 종료 중 예외 (무시): {e}")
+    
+    # Playwright 종료 (가장 마지막)
+    if playwright:
+        try:
+            await playwright.stop()
+        except Exception as e:
+            logger.debug(f"[{worker_type}] Playwright 종료 중 예외 (무시): {e}")
 
 
 async def _restore_input_values_on_page(page, input_values: Dict[str, str], run_id: UUID, worker_type: str = "NODE"):
@@ -264,8 +336,55 @@ async def _extract_and_filter_actions(
     else:
         _log("ACTION", run_id, f"입력 액션 없음, 필터링 스킵")
     
-    _log("ACTION", run_id, f"최종 결과: 일반 액션={len(normal_actions)}, 처리 가능한 입력 액션={len(processable_input_actions)}")
-    return normal_actions, processable_input_actions
+    # 같은 노드로 돌아오는 액션 필터링 (이미 실패한 액션 제외)
+    # 효율성을 위해 한 번에 실패 엣지 조회
+    from repositories.edge_repository import get_edges_by_run_id
+    all_edges = get_edges_by_run_id(run_id)
+    
+    # 같은 노드로 돌아온 실패 엣지 집합 생성 (빠른 조회를 위해)
+    same_node_failed_actions = set()
+    for edge in all_edges:
+        if (edge.get("from_node_id") == str(from_node_id) and
+            edge.get("outcome") == "fail" and
+            edge.get("error_msg") and
+            "같은 노드로 돌아옴" in edge.get("error_msg", "")):
+            # 액션 키 생성: (action_type, action_target, action_value)
+            action_key = (
+                edge.get("action_type", ""),
+                edge.get("action_target", ""),
+                edge.get("action_value", "") or ""
+            )
+            same_node_failed_actions.add(action_key)
+    
+    # 일반 액션 필터링
+    filtered_normal_actions = []
+    for action in normal_actions:
+        action_key = (
+            action.get("action_type", ""),
+            action.get("action_target", ""),
+            action.get("action_value", "") or ""
+        )
+        if action_key not in same_node_failed_actions:
+            filtered_normal_actions.append(action)
+    
+    # 입력 액션 필터링
+    filtered_input_actions = []
+    for action in processable_input_actions:
+        action_key = (
+            action.get("action_type", ""),
+            action.get("action_target", ""),
+            action.get("action_value", "") or ""
+        )
+        if action_key not in same_node_failed_actions:
+            filtered_input_actions.append(action)
+    
+    filtered_count = (len(normal_actions) - len(filtered_normal_actions) + 
+                     len(processable_input_actions) - len(filtered_input_actions))
+    if filtered_count > 0:
+        _log("ACTION", run_id, f"같은 노드로 돌아오는 액션 {filtered_count}개 필터링됨", "DEBUG")
+    
+    _log("ACTION", run_id, f"최종 결과: 일반 액션={len(filtered_normal_actions)}, 처리 가능한 입력 액션={len(filtered_input_actions)}")
+    return filtered_normal_actions, filtered_input_actions
 
 
 async def _create_action_workers(
@@ -288,6 +407,26 @@ async def _create_action_workers(
     # EdgeService를 한 번만 생성하여 재사용
     edge_service = EdgeService()
     
+    # 동치 노드 체크를 위한 노드 정보 조회 (한 번만 조회)
+    from_node = None
+    equivalent_node_ids = []
+    try:
+        from_node = get_node_by_id(from_node_id)
+        if from_node:
+            state_hash = from_node.get("state_hash")
+            a11y_hash = from_node.get("a11y_hash")
+            input_state_hash = from_node.get("input_state_hash")
+            if state_hash and a11y_hash and input_state_hash:
+                from repositories.node_repository import find_equivalent_nodes
+                equivalent_nodes = find_equivalent_nodes(
+                    run_id, state_hash, a11y_hash, input_state_hash, exclude_node_id=from_node_id
+                )
+                equivalent_node_ids = [UUID(node["id"]) for node in equivalent_nodes]
+                if equivalent_node_ids:
+                    logger.debug(f"동치 노드 {len(equivalent_node_ids)}개 발견: {[str(nid)[:8] for nid in equivalent_node_ids[:5]]}")
+    except Exception as e:
+        logger.debug(f"동치 노드 조회 실패 (계속 진행): {e}")
+    
     for idx, action in enumerate(actions, 1):
         action_type = action.get("action_type", "")
         action_target = action.get("action_target", "")
@@ -309,11 +448,27 @@ async def _create_action_workers(
         
         try:
             # 1. 중복 체크를 먼저 수행 (락 획득 전에 체크하여 불필요한 락 경합 방지)
-            existing = edge_service.is_duplicate_action(run_id, from_node_id, action)
+            # 실패한 엣지도 체크하여 중복 방지
+            existing = edge_service.is_duplicate_action(run_id, from_node_id, action, check_failed=True)
             if existing:
-                _log("ACTION", run_id, f"[{idx}/{len(actions)}] 중복 액션 (성공), 스킵: {action_type} / {action_info}", "WARN")
+                existing_outcome = existing.get("outcome", "unknown")
+                _log("ACTION", run_id, f"[{idx}/{len(actions)}] 중복 액션 발견 (outcome={existing_outcome}), 스킵: {action_type} / {action_info}", "WARN")
                 skipped_count += 1
                 duplicate_count += 1
+                continue
+            
+            # 1-1. 동치 노드에서 이미 성공한 액션이 있는지 확인
+            equivalent_action_found = False
+            if equivalent_node_ids:
+                for equiv_node_id in equivalent_node_ids:
+                    existing_equiv = edge_service.is_duplicate_action(run_id, equiv_node_id, action, check_failed=False)
+                    if existing_equiv:
+                        _log("ACTION", run_id, f"[{idx}/{len(actions)}] 동치 노드에서 이미 성공한 액션 발견, 스킵: {action_type} / {action_info} (동치 노드: {equiv_node_id})", "WARN")
+                        skipped_count += 1
+                        duplicate_count += 1
+                        equivalent_action_found = True
+                        break
+            if equivalent_action_found:
                 continue
             
             # 2. 실패한 액션의 재시도 제한 체크 (락 획득 전에 체크)
@@ -323,7 +478,7 @@ async def _create_action_workers(
             )
             MAX_FAILED_RETRIES = 3
             if failed_count >= MAX_FAILED_RETRIES:
-                _log("ACTION", run_id, f"[{idx}/{len(actions)}] 실패한 액션 재시도 제한 초과 ({failed_count}회), 스킵: {action_type} / {action_info}", "WARN")
+                _log("ACTION", run_id, f"[{idx}/{len(actions)}] 실패한 액션 재시도 제한 초과 ({failed_count}회 >= {MAX_FAILED_RETRIES}회), 스킵: {action_type} / {action_info}", "WARN")
                 skipped_count += 1
                 retry_limit_count += 1
                 continue
@@ -346,23 +501,32 @@ async def _create_action_workers(
                 continue
             
             # 4. 락 획득 후 다시 한 번 중복 체크 (락 획득 전과 후 사이에 다른 워커가 성공할 수 있음)
-            existing_after_lock = edge_service.is_duplicate_action(run_id, from_node_id, action)
+            # 실패한 엣지도 체크하여 중복 방지
+            existing_after_lock = edge_service.is_duplicate_action(run_id, from_node_id, action, check_failed=True)
             if existing_after_lock:
-                _log("ACTION", run_id, f"[{idx}/{len(actions)}] 락 획득 후 중복 액션 발견, 스킵: {action_type} / {action_info}", "WARN")
+                existing_outcome = existing_after_lock.get("outcome", "unknown")
+                _log("ACTION", run_id, f"[{idx}/{len(actions)}] 락 획득 후 중복 액션 발견 (outcome={existing_outcome}), 스킵: {action_type} / {action_info}", "WARN")
                 release_action_lock(run_id, from_node_id, action_type, action_target, action_value)
                 skipped_count += 1
                 continue
             
             # 5. 워커 생성
+            # 락을 해제하지 않고 유지하여 워커 실행 시점까지 중복 실행 방지
+            # 워커가 실행되면 다시 락을 획득하려고 시도하지만, 이미 락이 있으면 즉시 획득됨
+            # 락 만료 시간(timeout=300초)이 충분히 길어서 워커 실행까지 기다릴 수 있음
             process_action_worker.send(
                 str(run_id),
                 str(from_node_id),
                 action
             )
             created_count += 1
-            logger.debug(f"[{idx}/{len(actions)}] 워커 생성: {action_type} / {action_info}")
-            # 워커가 큐에서 꺼내 실행될 때 락을 획득하므로, 생성 후 즉시 해제
+            # 워커 생성 후 락 해제
+            # 이전에는 워커 실행 시점까지 락을 유지했으나, 이로 인해 워커가 락을 획득하지 못하는 데드락 발생
+            # 워커 큐에 넣은 후 바로 락을 해제하여 워커가 실행될 때 락을 획득할 수 있도록 함
             release_action_lock(run_id, from_node_id, action_type, action_target, action_value)
+            
+            created_count += 1
+            logger.debug(f"[{idx}/{len(actions)}] 워커 생성: {action_type} / {action_info} (락 해제됨)")
         except Exception as e:
             _log("ACTION", run_id, f"[{idx}/{len(actions)}] 워커 생성 실패: {e}", "ERROR")
             release_action_lock(run_id, from_node_id, action_type, action_target, action_value)
@@ -416,10 +580,16 @@ async def _process_node_worker_async(run_id: UUID, node_id: UUID):
     
     playwright = None
     browser = None
+    context = None
     start_time = time.time()
     
     try:
         _log("NODE", run_id, f"워커 시작: node_id={node_id}")
+        
+        # Run 상태 확인 (stopped/completed/failed 상태면 즉시 종료)
+        if _check_run_status(run_id) is None:
+            _log("NODE", run_id, f"Run 상태 확인 실패, 작업 중단: node_id={node_id}", "WARN")
+            return
         
         # 노드 처리 락 획득 (중복 처리 방지)
         if not acquire_node_lock(run_id, node_id, timeout=300):
@@ -499,16 +669,26 @@ async def _process_node_worker_async(run_id: UUID, node_id: UUID):
                 # 에러가 발생해도 계속 진행
                 has_changes = False
             
-            # 4. 수정사항이 있으면 process_pending_actions_worker 호출
+            # 4. run_memory 업데이트 후 run 상태 재확인
+            if _check_run_status(run_id) is None:
+                _log("NODE", run_id, f"Run 상태 확인 실패, 작업 중단: node_id={node_id}", "WARN")
+                return
+            
+            # 5. 수정사항이 있으면 process_pending_actions_worker 호출
             if has_changes:
-                _log("NODE", run_id, f"[4/6] pending actions 처리 워커 시작")
+                _log("NODE", run_id, f"[5/7] pending actions 처리 워커 시작")
                 from workers.tasks import process_pending_actions_worker
                 process_pending_actions_worker.send(str(run_id))
             else:
-                _log("NODE", run_id, f"[4/6] pending actions 처리 스킵")
+                _log("NODE", run_id, f"[5/7] pending actions 처리 스킵")
             
-            # 5. 현재 노드에서 액션 추출 및 필터링
-            _log("NODE", run_id, f"[5/6] 액션 추출 및 필터링 중...")
+            # 6. 액션 추출 전 run 상태 재확인
+            if _check_run_status(run_id) is None:
+                _log("NODE", run_id, f"Run 상태 확인 실패, 작업 중단: node_id={node_id}", "WARN")
+                return
+            
+            # 7. 현재 노드에서 액션 추출 및 필터링
+            _log("NODE", run_id, f"[6/7] 액션 추출 및 필터링 중...")
             normal_actions, processable_input_actions = await _extract_and_filter_actions(
                 page, run_id, node_id
             )
@@ -519,7 +699,12 @@ async def _process_node_worker_async(run_id: UUID, node_id: UUID):
                 _log("NODE", run_id, f"⚠ 액션이 없습니다. 페이지에서 액션을 찾을 수 없습니다.", "WARN")
                 logger.debug(f"페이지 URL: {node_url}, 제목: {await page.title()}")
             
-            # 6. 액션 필터링 및 워커 생성
+            # 8. 액션 추출 후 run 상태 재확인
+            if _check_run_status(run_id) is None:
+                _log("NODE", run_id, f"Run 상태 확인 실패, 작업 중단: node_id={node_id}", "WARN")
+                return
+            
+            # 9. 액션 필터링 및 워커 생성
             all_processable_actions = normal_actions + processable_input_actions
             if len(all_processable_actions) > 0:
                 _log("NODE", run_id, f"액션 워커 생성 시작: {len(all_processable_actions)}개")
@@ -529,6 +714,19 @@ async def _process_node_worker_async(run_id: UUID, node_id: UUID):
             else:
                 elapsed = time.time() - start_time
                 _log("NODE", run_id, f"⚠ 액션 없음, 워커 생성 스킵 (소요시간: {elapsed:.2f}초)", "WARN")
+                
+                # 액션이 없는 경우에도 완료 체크 예약 (엣지 생성이 멈춘 경우 대비)
+                from workers.tasks import check_graph_completion_worker
+                from utils.lock_manager import is_completion_check_scheduled, mark_completion_check_scheduled
+                from services.graph_completion_service import CHECK_INTERVAL_SECONDS
+                
+                if not is_completion_check_scheduled(run_id, window_seconds=30):
+                    mark_completion_check_scheduled(run_id, window_seconds=30)
+                    check_graph_completion_worker.send_with_options(
+                        args=(str(run_id),),
+                        delay=CHECK_INTERVAL_SECONDS * 1000
+                    )
+                    logger.debug(f"액션 없음 - 완료 체크 워커 예약 (안전장치): run_id={run_id}, {CHECK_INTERVAL_SECONDS}초 후")
         finally:
             # 락 해제
             release_node_lock(run_id, node_id)
@@ -539,10 +737,7 @@ async def _process_node_worker_async(run_id: UUID, node_id: UUID):
         logger.error(f"노드 워커 에러 발생 (소요시간: {elapsed:.2f}초): {e}", exc_info=True)
         release_node_lock(run_id, node_id)
     finally:
-        if browser:
-            await browser.close()
-        if playwright:
-            await playwright.stop()
+        await safe_close_browser_resources(browser, playwright, context, "NODE")
 
 
 @dramatiq.actor(max_retries=2, time_limit=600000)  # 5분 → 10분으로 증가
@@ -595,6 +790,7 @@ async def _process_action_worker_async(
     
     playwright = None
     browser = None
+    context = None
     start_time = time.time()
     
     action_type = action.get("action_type", "")
@@ -623,17 +819,44 @@ async def _process_action_worker_async(
         else:
             _log("ACTION", run_id, f"워커 시작: {action_type} / {action_info}")
         
+        # Run 상태 확인 (stopped/completed/failed 상태면 즉시 종료)
+        if _check_run_status(run_id) is None:
+            _log("ACTION", run_id, f"Run 상태 확인 실패, 작업 중단: {action_type} / {action_info}", "WARN")
+            return
+        
+        # 워커 시작 전 다시 한 번 중복 체크 (락 획득 대기 방지)
+        # 큐에 대기하는 동안 다른 워커가 처리를 완료했을 수 있음
+        edge_service = EdgeService()
+        existing = edge_service.is_duplicate_action(run_id, from_node_id, action, check_failed=True)
+        if existing:
+            existing_outcome = existing.get("outcome", "unknown")
+            _log("ACTION", run_id, f"워커 시작 전 중복 액션 발견 (outcome={existing_outcome}), 종료: {action_type} / {action_info}", "INFO")
+            return
+
         # 액션 처리 락 획득 (재시도 포함, 최대 5분 대기)
         # _create_action_workers에서 이미 획득했지만, 워커 시작 시 다시 확인
         # 락이 풀릴 때까지 최대 5분(300초) 대기
+        # 단, _create_action_workers에서 락을 유지하고 있으므로, 여기서는 재시도 없이 즉시 확인
         lock_acquired = acquire_action_lock(
             run_id, from_node_id, action_type, action_target, action_value,
             timeout=300,  # 락 만료 시간
-            retry_interval=0.5,  # 0.5초마다 재시도
-            max_retries=600  # 최대 300초(5분) 대기
+            retry_interval=0.1,  # 0.1초마다 재시도
+            max_retries=10  # 최대 1초 대기 (락이 이미 획득되어 있으므로 빠르게 확인)
         )
         if not lock_acquired:
-            _log("ACTION", run_id, f"액션 처리 락 획득 실패 (5분 대기 후), 종료", "WARN")
+            # 락 획득 실패 시, 다른 워커가 처리 중이거나 락이 만료되었을 수 있음
+            _log("ACTION", run_id, f"액션 처리 락 획득 실패 (다른 워커가 처리 중일 수 있음), 종료: {action_type} / {action_info}", "WARN")
+            return
+        
+        # 락 획득 후 다시 한 번 재시도 제한 체크 (다른 워커가 이미 엣지를 생성했을 수 있음)
+        from repositories.edge_repository import count_failed_edges
+        failed_count_after_lock = count_failed_edges(
+            run_id, from_node_id, action_type, action_target, action_value
+        )
+        MAX_FAILED_RETRIES = 3
+        if failed_count_after_lock >= MAX_FAILED_RETRIES:
+            _log("ACTION", run_id, f"락 획득 후 재시도 제한 재확인 ({failed_count_after_lock}회 >= {MAX_FAILED_RETRIES}회), 종료: {action_type} / {action_info}", "WARN")
+            release_action_lock(run_id, from_node_id, action_type, action_target, action_value)
             return
         
         try:
@@ -716,8 +939,13 @@ async def _process_action_worker_async(
                     else:
                         logger.debug(f"도착 노드: {to_node_id}")
             
-            # 4. 도착 노드 조회 (이미 페이지가 해당 노드에 있음)
-            # 5. update_run_memory_with_ai 호출 및 수정사항 확인 (성공한 경우만)
+            # 4. 액션 실행 후 run 상태 재확인
+            if _check_run_status(run_id) is None:
+                _log("ACTION", run_id, f"Run 상태 확인 실패, 작업 중단: {action_type} / {action_info}", "WARN")
+                return
+            
+            # 5. 도착 노드 조회 (이미 페이지가 해당 노드에 있음)
+            # 6. update_run_memory_with_ai 호출 및 수정사항 확인 (성공한 경우만)
             has_changes = False
             if not action_failed:
                 # 액션이 성공한 경우에만 run_memory 업데이트
@@ -762,13 +990,18 @@ async def _process_action_worker_async(
                     logger.warning(f"run_memory 업데이트 실패 (계속 진행): {error_msg}", exc_info=True)
                     has_changes = False
                 
-                # 6. 수정사항이 있으면 process_pending_actions_worker 호출
+                # 7. 수정사항이 있으면 process_pending_actions_worker 호출
                 if has_changes:
                     logger.debug(f"pending actions 처리 워커 시작")
                     from workers.tasks import process_pending_actions_worker
                     process_pending_actions_worker.send(str(run_id))
             
-            # 7. 현재 노드에서 액션 추출 및 필터링 (성공/실패 관계없이 진행)
+            # 8. 액션 추출 전 run 상태 재확인
+            if _check_run_status(run_id) is None:
+                _log("ACTION", run_id, f"Run 상태 확인 실패, 작업 중단: {action_type} / {action_info}", "WARN")
+                return
+            
+            # 9. 현재 노드에서 액션 추출 및 필터링 (성공/실패 관계없이 진행)
             # to_node_id가 UUID가 아닌 경우 변환
             if isinstance(to_node_id, str):
                 to_node_id = UUID(to_node_id)
@@ -798,7 +1031,12 @@ async def _process_action_worker_async(
                     )
                     logger.debug(f"액션 추출 완료: 일반={len(normal_actions)}, 입력={len(processable_input_actions)}")
                     
-                    # 8. 액션 필터링 및 워커 생성
+                    # 10. 액션 추출 후 run 상태 재확인
+                    if _check_run_status(run_id) is None:
+                        _log("ACTION", run_id, f"Run 상태 확인 실패, 작업 중단: {action_type} / {action_info}", "WARN")
+                        return
+                    
+                    # 11. 액션 필터링 및 워커 생성
                     all_processable_actions = normal_actions + processable_input_actions
                     if len(all_processable_actions) > 0:
                         _log("ACTION", run_id, f"액션 워커 생성 시작: {len(all_processable_actions)}개 (노드: {to_node_id})")
@@ -811,6 +1049,33 @@ async def _process_action_worker_async(
                             _log("ACTION", run_id, f"액션 실패 후 액션 없음 (소요시간: {elapsed:.2f}초)", "DEBUG")
                         else:
                             logger.debug(f"액션 없음, 워커 생성 스킵 (소요시간: {elapsed:.2f}초)")
+                    
+                    # 9. 그래프 완료 체크 워커 호출 (엣지 생성 후)
+                    # 지연 실행하여 다른 워커들이 먼저 처리할 수 있도록 함
+                    # 일정 시간 내 중복 호출 방지
+                    from workers.tasks import check_graph_completion_worker
+                    from utils.lock_manager import is_completion_check_scheduled, mark_completion_check_scheduled
+                    
+                    # 최근 10초 내에 이미 완료 체크가 예약되었는지 확인
+                    if not is_completion_check_scheduled(run_id, window_seconds=10):
+                        # 예약 표시 및 워커 호출
+                        mark_completion_check_scheduled(run_id, window_seconds=10)
+                        # dramatiq의 delay 옵션 사용 (밀리초 단위, 5초 후 실행)
+                        check_graph_completion_worker.send_with_options(args=(str(run_id),), delay=5000)
+                    else:
+                        logger.debug(f"완료 체크 워커 호출 스킵 (이미 예약됨): run_id={run_id}")
+                    
+                    # 추가 안전장치: 액션 추출 후에도 완료 체크 예약 (엣지 생성이 멈춘 경우 대비)
+                    # 최근 30초 내에 완료 체크가 예약되지 않았으면 예약
+                    if not is_completion_check_scheduled(run_id, window_seconds=30):
+                        from services.graph_completion_service import CHECK_INTERVAL_SECONDS
+                        mark_completion_check_scheduled(run_id, window_seconds=30)
+                        # CHECK_INTERVAL_SECONDS 후에 완료 체크 수행
+                        check_graph_completion_worker.send_with_options(
+                            args=(str(run_id),),
+                            delay=CHECK_INTERVAL_SECONDS * 1000
+                        )
+                        logger.debug(f"추가 완료 체크 워커 예약 (안전장치): run_id={run_id}, {CHECK_INTERVAL_SECONDS}초 후")
                 finally:
                     # 노드 처리 락 해제
                     release_node_lock(run_id, to_node_id)
@@ -825,10 +1090,7 @@ async def _process_action_worker_async(
         logger.error(f"액션 워커 에러 발생 (소요시간: {elapsed:.2f}초): {e}", exc_info=True)
         release_action_lock(run_id, from_node_id, action_type, action_target, action_value)
     finally:
-        if browser:
-            await browser.close()
-        if playwright:
-            await playwright.stop()
+        await safe_close_browser_resources(browser, playwright, context, "ACTION")
 
 
 @dramatiq.actor(max_retries=2, time_limit=600000)  # 5분 → 10분으로 증가
@@ -858,6 +1120,11 @@ async def _process_pending_actions_worker_async(run_id: UUID):
     try:
         _log("PENDING", run_id, f"워커 시작")
         
+        # Run 상태 확인 (stopped/completed/failed 상태면 즉시 종료)
+        if _check_run_status(run_id) is None:
+            _log("PENDING", run_id, f"Run 상태 확인 실패, 작업 중단", "WARN")
+            return
+        
         # 1. process_pending_actions_with_run_memory 호출
         _log("PENDING", run_id, f"[1/2] pending actions 처리 가능 여부 확인 중...")
         ai_service = AiService()
@@ -865,15 +1132,20 @@ async def _process_pending_actions_worker_async(run_id: UUID):
             run_id=run_id
         )
         
-        _log("PENDING", run_id, f"[1/2] 처리 가능한 액션 수: {len(processable_actions)}")
+        _log("PENDING", run_id, f"[1/3] 처리 가능한 액션 수: {len(processable_actions)}")
         
         if not processable_actions:
             _log("PENDING", run_id, f"처리 가능한 액션 없음, 종료")
             return
         
-        # 2. 각 액션에 대해 process_action_worker 워커 생성
+        # 2. 처리 가능한 액션 확인 후 run 상태 재확인
+        if _check_run_status(run_id) is None:
+            _log("PENDING", run_id, f"Run 상태 확인 실패, 작업 중단", "WARN")
+            return
+        
+        # 3. 각 액션에 대해 process_action_worker 워커 생성
         # pending action에는 from_node_id가 있음
-        _log("PENDING", run_id, f"[2/2] pending actions 조회 중...")
+        _log("PENDING", run_id, f"[2/3] pending actions 조회 중...")
         pending_action_service = PendingActionService()
         pending_actions = pending_action_service.list_pending_actions(
             run_id=run_id,
@@ -881,11 +1153,15 @@ async def _process_pending_actions_worker_async(run_id: UUID):
             status="pending"
         )
         
-        _log("PENDING", run_id, f"[2/2] 전체 pending actions 수: {len(pending_actions)}")
+        _log("PENDING", run_id, f"[2/3] 전체 pending actions 수: {len(pending_actions)}")
         
         created_count = 0
         # 처리 가능한 액션과 매칭하여 from_node_id 찾기
         for idx, processable_action in enumerate(processable_actions, 1):
+            # 각 액션 처리 전 run 상태 확인
+            if _check_run_status(run_id) is None:
+                _log("PENDING", run_id, f"Run 상태 확인 실패, 작업 중단 (처리 중: {idx}/{len(processable_actions)})", "WARN")
+                break
             action_type = processable_action.get("action_type", "")
             action_target = processable_action.get("action_target", "")
             role = processable_action.get("role", "")
@@ -917,12 +1193,12 @@ async def _process_pending_actions_worker_async(run_id: UUID):
                         processable_action
                     )
                     created_count += 1
-                    _log("PENDING", run_id, f"[2/2] [{idx}/{len(processable_actions)}] 워커 생성: {action_type} / {action_info} (from_node={from_node_id})")
+                    _log("PENDING", run_id, f"[3/3] [{idx}/{len(processable_actions)}] 워커 생성: {action_type} / {action_info} (from_node={from_node_id})")
                     matched = True
                     break
             
             if not matched:
-                _log("PENDING", run_id, f"[2/2] [{idx}/{len(processable_actions)}] 매칭되는 pending action 없음: {action_type} / {action_info}", "WARN")
+                _log("PENDING", run_id, f"[3/3] [{idx}/{len(processable_actions)}] 매칭되는 pending action 없음: {action_type} / {action_info}", "WARN")
         
         elapsed = time.time() - start_time
         _log("PENDING", run_id, f"워커 완료: {created_count}개 워커 생성 (소요시간: {elapsed:.2f}초)")
@@ -931,3 +1207,197 @@ async def _process_pending_actions_worker_async(run_id: UUID):
         elapsed = time.time() - start_time
         _log("PENDING", run_id, f"에러 발생 (소요시간: {elapsed:.2f}초): {e}", "ERROR")
         logger.error(f"pending actions 워커 에러 발생 (소요시간: {elapsed:.2f}초): {e}", exc_info=True)
+
+
+@dramatiq.actor(max_retries=2, time_limit=600000)
+def check_graph_completion_worker(run_id: str):
+    """
+    그래프 구축 완료 여부를 체크하는 워커
+    
+    Args:
+        run_id: 탐색 세션 ID (문자열)
+    """
+    run_id_uuid = UUID(run_id)
+    set_context(run_id=str(run_id_uuid), worker_type="GRAPH_COMPLETION_CHECKER")
+    logger.debug(f"그래프 완료 체크 워커 시작: run_id={run_id}")
+    
+    # 완료 체크 락 획득 (중복 실행 방지)
+    from utils.lock_manager import acquire_completion_check_lock, release_completion_check_lock
+    
+    lock_acquired = acquire_completion_check_lock(
+        run_id_uuid,
+        timeout=30,  # 락 만료 시간: 30초
+        retry_interval=0.1,
+        max_retries=0  # 재시도 없음 - 다른 워커가 실행 중이면 즉시 종료
+    )
+    
+    if not lock_acquired:
+        # 다른 워커가 이미 완료 체크를 실행 중이면 스킵
+        logger.debug(f"그래프 완료 체크 워커 스킵 (다른 워커가 실행 중): run_id={run_id}")
+        clear_context()
+        return
+    
+    try:
+        from services.graph_completion_service import check_graph_completion, complete_graph_building, CHECK_INTERVAL_SECONDS
+        
+        # Run 상태 확인 (stopped/completed/failed 상태면 재스케줄링하지 않음)
+        from repositories.run_repository import get_run_by_id
+        run = get_run_by_id(run_id_uuid)
+        if not run:
+            logger.warning(f"Run을 찾을 수 없습니다: {run_id}")
+            return
+        
+        status = run.get("status")
+        if status != "running":
+            logger.debug(f"Run이 이미 완료되었거나 중지됨: status={status}, 재스케줄링하지 않음")
+            return
+        
+        # 완료 여부 체크
+        is_complete = check_graph_completion(run_id_uuid)
+        
+        if is_complete:
+            logger.info(f"그래프 구축 완료 감지: run_id={run_id}")
+            # 완료 처리 및 full_analysis 시작
+            complete_graph_building(run_id_uuid)
+        else:
+            logger.debug(f"그래프 구축 진행 중: run_id={run_id}, {CHECK_INTERVAL_SECONDS}초 후 재체크 예약")
+            # 완료되지 않았으면 일정 시간 후 다시 체크하도록 재스케줄링
+            # 이렇게 하면 엣지 생성이 멈춰도 주기적으로 완료 체크가 수행됨
+            check_graph_completion_worker.send_with_options(
+                args=(run_id,),
+                delay=CHECK_INTERVAL_SECONDS * 1000  # 밀리초 단위
+            )
+    
+    except Exception as e:
+        logger.error(f"그래프 완료 체크 워커 에러 발생: {e}", exc_info=True)
+        # 에러 발생 시에도 재스케줄링 (일시적인 오류일 수 있음)
+        try:
+            from services.graph_completion_service import CHECK_INTERVAL_SECONDS
+            from repositories.run_repository import get_run_by_id
+            run = get_run_by_id(run_id_uuid)
+            if run and run.get("status") == "running":
+                check_graph_completion_worker.send_with_options(
+                    args=(run_id,),
+                    delay=CHECK_INTERVAL_SECONDS * 1000
+                )
+                logger.debug(f"에러 발생 후 재스케줄링: run_id={run_id}")
+        except Exception as reschedule_error:
+            logger.error(f"재스케줄링 실패: {reschedule_error}", exc_info=True)
+    finally:
+        # 락 해제
+        release_completion_check_lock(run_id_uuid)
+        clear_context()
+
+
+@dramatiq.actor(max_retries=0, time_limit=300000)  # 5분 타임아웃
+def periodic_completion_check_worker():
+    """
+    주기적으로 모든 running 상태의 run을 체크하여 완료 여부를 확인하는 워커
+    
+    이 워커는 엣지 생성과 관계없이 독립적으로 실행되어,
+    엣지 생성이 멈춰도 주기적으로 완료 체크를 수행합니다.
+    """
+    from repositories.run_repository import get_runs_by_status
+    from services.graph_completion_service import CHECK_INTERVAL_SECONDS
+    
+    set_context(worker_type="PERIODIC_COMPLETION_CHECKER")
+    logger.debug("주기적 완료 체크 워커 시작")
+    
+    try:
+        # 모든 running 상태의 run 조회
+        running_runs = get_runs_by_status("running")
+        logger.debug(f"Running 상태의 run 수: {len(running_runs)}")
+        
+        if not running_runs:
+            logger.debug("Running 상태의 run이 없습니다.")
+            return
+        
+        # 각 run에 대해 완료 체크 워커 호출
+        checked_count = 0
+        for run in running_runs:
+            run_id = run.get("id")
+            if not run_id:
+                continue
+            
+            try:
+                # 완료 체크 워커 호출 (즉시 실행)
+                check_graph_completion_worker.send(str(run_id))
+                checked_count += 1
+            except Exception as e:
+                logger.warning(f"완료 체크 워커 호출 실패 (run_id={run_id}): {e}", exc_info=True)
+        
+        logger.debug(f"완료 체크 워커 호출 완료: {checked_count}개")
+        
+        # 다음 주기적 체크 예약 (CHECK_INTERVAL_SECONDS 후)
+        periodic_completion_check_worker.send_with_options(
+            args=(),
+            delay=CHECK_INTERVAL_SECONDS * 1000  # 밀리초 단위
+        )
+        logger.debug(f"다음 주기적 완료 체크 예약: {CHECK_INTERVAL_SECONDS}초 후")
+    
+    except Exception as e:
+        logger.error(f"주기적 완료 체크 워커 에러 발생: {e}", exc_info=True)
+        # 에러 발생 시에도 다음 체크 예약 (일시적인 오류일 수 있음)
+        try:
+            from services.graph_completion_service import CHECK_INTERVAL_SECONDS
+            periodic_completion_check_worker.send_with_options(
+                args=(),
+                delay=CHECK_INTERVAL_SECONDS * 1000
+            )
+        except Exception as reschedule_error:
+            logger.error(f"재스케줄링 실패: {reschedule_error}", exc_info=True)
+    finally:
+        clear_context()
+
+
+@dramatiq.actor(max_retries=1, time_limit=3600000)  # 1시간 타임아웃
+def run_full_analysis_worker(run_id: str):
+    """
+    Full analysis를 실행하는 워커
+    
+    Args:
+        run_id: 탐색 세션 ID (문자열)
+    """
+    # Import를 함수 시작 부분에 배치
+    from repositories.run_repository import get_run_by_id, update_run
+    from services.analysis_service import AnalysisService
+    
+    run_id_uuid = UUID(run_id)
+    set_context(run_id=str(run_id_uuid), worker_type="FULL_ANALYSIS")
+    logger.info(f"Full analysis 워커 시작: run_id={run_id}")
+    
+    try:
+        
+        # Run 상태 확인
+        run = get_run_by_id(run_id_uuid)
+        if not run:
+            logger.error(f"Run을 찾을 수 없습니다: {run_id}")
+            return
+        
+        status = run.get("status")
+        if status != "completed":
+            logger.warning(f"Run 상태가 completed가 아닙니다: status={status}")
+            return
+        
+        # Full analysis 실행
+        logger.info(f"Full analysis 실행 시작: run_id={run_id}")
+        analysis_result = AnalysisService.run_full_analysis(run_id_uuid)
+        
+        # 결과를 DB에 저장
+        from routers.evaluation import _save_analysis_results_to_db
+        _save_analysis_results_to_db(run_id_uuid, analysis_result)
+        
+        logger.info(f"Full analysis 완료: run_id={run_id}")
+    
+    except Exception as e:
+        logger.error(f"Full analysis 워커 에러 발생: {e}", exc_info=True)
+        # 오류 발생 시에도 run 상태를 failed로 변경하지 않음
+        # (그래프 구축은 완료되었으므로 completed 상태를 유지)
+        # 대신 에러를 로깅하고, 필요시 수동으로 재시도할 수 있도록 함
+        logger.warning(
+            f"Full analysis 실행 실패 (run 상태는 completed 유지): run_id={run_id}, "
+            f"에러={str(e)[:200]}. 필요시 수동으로 재시도하거나 로그를 확인하세요."
+        )
+        # run 상태는 completed로 유지 (그래프 구축은 성공적으로 완료되었으므로)
+    finally:
+        clear_context()
