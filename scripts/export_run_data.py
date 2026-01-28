@@ -57,7 +57,10 @@ def export_run_data(run_id: UUID, output_dir: Path = None) -> str:
     # 파일명 생성
     timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
     filename = f"run_data_{str(run_id)}_{timestamp}.json"
-    output_path = output_dir / filename
+    # raw_data/run_data 디렉터리 사용
+    run_data_dir = output_dir / "raw_data" / "run_data"
+    run_data_dir.mkdir(parents=True, exist_ok=True)
+    output_path = run_data_dir / filename
     
     # JSON 파일로 저장
     logger.info(f"데이터 저장 중: {output_path}")

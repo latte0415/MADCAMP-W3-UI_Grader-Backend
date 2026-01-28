@@ -540,7 +540,9 @@ class AnalysisService:
         }
         
         output_filename = f"full_analysis_{run_id}.json"
-        output_path = os.path.join(project_root, output_filename)
+        output_dir = os.path.join(project_root, "raw_data", "full_analysis")
+        os.makedirs(output_dir, exist_ok=True)
+        output_path = os.path.join(output_dir, output_filename)
         with open(output_path, "w", encoding="utf-8") as f:
             json.dump(final_output, f, ensure_ascii=False, indent=2)
         
