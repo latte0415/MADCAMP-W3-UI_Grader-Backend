@@ -66,12 +66,14 @@ API 서비스의 "Variables" 탭에서 다음 변수들을 설정합니다:
 3. 서비스 이름: `worker` (또는 원하는 이름)
 4. Root Directory: `/` (기본값)
 5. Build Command: (Dockerfile 사용 시 자동으로 빌드됨)
-6. Start Command: `python -m workers.worker`
+6. **Start Command**: `python -m workers.worker` (반드시 설정!)
 
 **중요 사항:**
 - 워커 서비스는 API 서비스와 **같은 저장소**를 사용하지만 **별도의 서비스**입니다
 - 워커 서비스는 포트를 노출할 필요가 없으므로 "Generate Domain"을 하지 않아도 됩니다
 - 워커 서비스는 백그라운드에서 계속 실행되어야 하므로 항상 실행 상태를 유지합니다
+- **Start Command를 반드시 설정해야 합니다**: Railway 대시보드 → Worker 서비스 → Settings → Deploy → Start Command에 `python -m workers.worker` 입력
+- Start Command를 설정하지 않으면 Dockerfile의 기본 CMD(`uvicorn`)가 실행되어 오류가 발생합니다
 
 **환경 변수 설정:**
 워커 서비스의 "Variables" 탭에서 다음 변수들을 설정합니다:
@@ -214,6 +216,28 @@ API 서비스의 "Variables" 탭에서 다음 변수들을 설정합니다:
 5. 메모리 부족 오류인 경우:
    - Railway 서비스의 리소스 할당량 확인
    - 필요시 더 큰 인스턴스로 업그레이드
+
+### 문제: Worker 서비스에서 "uvicorn could not be found" 오류
+
+**원인:**
+- Worker 서비스의 Start Command가 설정되지 않아 Dockerfile의 기본 CMD(`uvicorn`)가 실행됨
+- Worker 서비스는 `python -m workers.worker`를 실행해야 함
+
+**해결책:**
+1. Railway 대시보드에서 Worker 서비스 선택
+2. "Settings" → "Deploy" 섹션으로 이동
+3. "Start Command" 필드에 `python -m workers.worker` 입력
+4. "Deploy" 버튼 클릭하여 재배포
+
+**확인:**
+- Worker 서비스의 로그에서 "워커 프로세스 시작" 메시지 확인
+- "등록된 액터" 목록이 표시되는지 확인
+
+### 문제: API 서비스에서 "on_event is deprecated" 경고
+
+**해결책:**
+- 이미 수정되었습니다. `main.py`에서 `lifespan` 이벤트 핸들러를 사용합니다.
+- 최신 코드를 배포하면 경고가 사라집니다.
 
 ### 문제: 워커 서비스가 계속 재시작됨
 
