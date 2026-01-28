@@ -3,6 +3,7 @@ Node Worker Handler
 """
 import time
 import asyncio
+import json
 from typing import Dict, Any
 from uuid import UUID
 from utils.logger import get_logger, set_context
@@ -23,6 +24,34 @@ from utils.action_extractor import (
 )
 
 logger = get_logger(__name__)
+
+# #region agent log
+def _debug_log(location: str, message: str, data: dict, hypothesis_id: str = None):
+    """디버그 로그 작성 헬퍼"""
+    try:
+        import os
+        log_path = "/Users/laxogud/MADCAMP/W3/backend/.cursor/debug.log"
+        os.makedirs(os.path.dirname(log_path), exist_ok=True)
+        log_entry = {
+            "sessionId": "debug-session",
+            "runId": "current",
+            "hypothesisId": hypothesis_id,
+            "location": location,
+            "message": message,
+            "data": data,
+            "timestamp": int(time.time() * 1000)
+        }
+        with open(log_path, "a", encoding="utf-8") as f:
+            f.write(json.dumps(log_entry, ensure_ascii=False) + "\n")
+            f.flush()
+            os.fsync(f.fileno())  # 강제로 디스크에 쓰기
+    except Exception as e:
+        # 로거가 없을 수도 있으므로 print도 사용
+        try:
+            logger.error(f"디버그 로그 작성 실패: {e}", exc_info=True)
+        except:
+            print(f"디버그 로그 작성 실패: {e}")
+# #endregion
 
 async def _extract_and_filter_actions(
     page,
@@ -158,10 +187,57 @@ async def _extract_and_filter_actions(
     _log("ACTION", run_id, f"최종 결과: 일반 액션={len(filtered_normal_actions)}, 처리 가능한 입력 액션={len(filtered_input_actions)}")
     return filtered_normal_actions, filtered_input_actions
 
+def _extract_domain(url: str) -> str:
+    """
+    URL에서 도메인 추출
+    
+    Args:
+        url: URL 문자열
+    
+    Returns:
+        도메인 문자열 (예: "example.com")
+    """
+    try:
+        from urllib.parse import urlparse
+        parsed = urlparse(url)
+        hostname = parsed.hostname or ""
+        # 포트 제거
+        if ":" in hostname:
+            hostname = hostname.split(":")[0]
+        return hostname.lower()
+    except Exception:
+        return ""
+
+
+def _check_url_in_scope(current_url: str, target_url: str) -> bool:
+    """
+    현재 URL이 target_url의 범위 내에 있는지 확인
+    
+    Args:
+        current_url: 현재 URL
+        target_url: 타겟 URL (시작 URL)
+    
+    Returns:
+        범위 내에 있으면 True, 아니면 False
+    """
+    try:
+        current_domain = _extract_domain(current_url)
+        target_domain = _extract_domain(target_url)
+        
+        if not current_domain or not target_domain:
+            return True  # 도메인 추출 실패 시 계속 진행 (안전장치)
+        
+        # 같은 도메인이면 범위 내
+        return current_domain == target_domain
+    except Exception:
+        return True  # 에러 발생 시 계속 진행 (안전장치)
+
+
 async def process_node_worker_async(run_id: UUID, node_id: UUID):
     """process_node_worker의 비동기 구현"""
     from utils.lock_manager import acquire_node_lock, release_node_lock
     from services.graph_completion_service import check_graph_completion, complete_graph_building
+    from repositories.run_repository import get_run_by_id, update_run
     # Import actor to spawn
     from workers.tasks import process_node_worker
     
@@ -172,11 +248,27 @@ async def process_node_worker_async(run_id: UUID, node_id: UUID):
     
     try:
         _log("NODE", run_id, f"워커 시작: node_id={node_id}")
+        # #region agent log
+        _debug_log(
+            f"{__file__}:{174}",
+            "process_node_worker_async 시작",
+            {"run_id": str(run_id), "node_id": str(node_id)},
+            "A"
+        )
+        # #endregion
         
         # Run 상태 확인
-        if _check_run_status(run_id) is None:
-            _log("NODE", run_id, f"Run 상태 확인 실패, 작업 중단: node_id={node_id}", "WARN")
+        run = get_run_by_id(run_id)
+        if not run:
+            _log("NODE", run_id, f"Run을 찾을 수 없습니다: node_id={node_id}", "WARN")
             return
+        
+        if run.get("status") not in ["running"]:
+            _log("NODE", run_id, f"Run 상태가 {run.get('status')}이므로 작업 중단: node_id={node_id}", "WARN")
+            return
+        
+        # target_url 가져오기
+        target_url = run.get("target_url") or run.get("start_url", "")
         
         # 노드 처리 락 획득
         if not acquire_node_lock(run_id, node_id, timeout=300):
@@ -193,6 +285,13 @@ async def process_node_worker_async(run_id: UUID, node_id: UUID):
             
             node_url = node.get("url", "unknown")
             _log("NODE", run_id, f"노드 처리 시작: URL={node_url}")
+            
+            # URL 범위 체크: target_url의 도메인과 다른 도메인으로 이동했는지 확인
+            if target_url and not _check_url_in_scope(node_url, target_url):
+                _log("NODE", run_id, f"URL 범위 벗어남: {node_url} (target: {target_url}), Run 종료", "WARN")
+                update_run(run_id, {"status": "stopped"})
+                logger.info(f"Run 종료: URL 범위 벗어남 - current={node_url}, target={target_url}")
+                return
             
             artifacts = node.get("artifacts") or {}
             storage_state = artifacts.get("storage_state")
@@ -304,19 +403,65 @@ async def process_node_worker_async(run_id: UUID, node_id: UUID):
                                 continue
                         
                         # 액션 실행 및 엣지 기록
+                        # #region agent log
+                        _debug_log(
+                            f"{__file__}:{369}",
+                            "perform_and_record_edge 호출 전",
+                            {"run_id": str(run_id), "from_node_id": str(node_id), "action_type": action.get("action_type"), "action_target": action.get("action_target", "")[:50]},
+                            "A"
+                        )
+                        # #endregion
                         edge = await edge_service.perform_and_record_edge(
                             run_id=run_id,
                             from_node_id=node_id, # 현재 처리 중인 노드가 from_node
                             page=page,
                             action=action
                         )
+                        # #region agent log
+                        _debug_log(
+                            f"{__file__}:{377}",
+                            "perform_and_record_edge 반환 후",
+                            {
+                                "edge": edge is not None,
+                                "edge_id": edge.get("id") if edge else None,
+                                "edge_outcome": edge.get("outcome") if edge else None,
+                                "edge_to_node_id": edge.get("to_node_id") if edge else None,
+                                "edge_to_node_id_type": type(edge.get("to_node_id")).__name__ if edge and edge.get("to_node_id") else None,
+                                "edge_keys": list(edge.keys()) if edge else None
+                            },
+                            "A"
+                        )
+                        # #endregion
                         
                         processed_count += 1
                         
                         # 결과 처리
                         if edge and edge.get("outcome") == "success":
                             new_to_node_id = edge.get("to_node_id")
+                            # #region agent log
+                            _debug_log(
+                                f"{__file__}:{395}",
+                                "성공 엣지 처리 시작",
+                                {
+                                    "edge_id": edge.get("id"),
+                                    "new_to_node_id": new_to_node_id,
+                                    "new_to_node_id_type": type(new_to_node_id).__name__ if new_to_node_id else None,
+                                    "new_to_node_id_repr": repr(new_to_node_id),
+                                    "from_node_id": str(node_id)
+                                },
+                                "B"
+                            )
+                            # #endregion
+                            _log("NODE", run_id, f"성공 엣지 처리: edge_id={edge.get('id')}, to_node_id={new_to_node_id}, from_node={node_id}", "DEBUG")
                             
+                            # #region agent log
+                            _debug_log(
+                                f"{__file__}:{407}",
+                                "run_memory 업데이트 시작 전",
+                                {"run_id": str(run_id)},
+                                "C"
+                            )
+                            # #endregion
                             try:
                                 from utils.user_visible_info import collect_user_visible_info
                                 page_state = await collect_user_visible_info(page)
@@ -327,11 +472,27 @@ async def process_node_worker_async(run_id: UUID, node_id: UUID):
                                 }
                                 
                                 ai_service = AiService()
+                                # #region agent log
+                                _debug_log(
+                                    f"{__file__}:{421}",
+                                    "update_run_memory_with_ai 호출 전",
+                                    {"run_id": str(run_id)},
+                                    "C"
+                                )
+                                # #endregion
                                 updated_memory, has_changes = await ai_service.update_run_memory_with_ai(
                                     run_id=run_id,
                                     auxiliary_data=auxiliary_data,
                                     page_state=page_state
                                 )
+                                # #region agent log
+                                _debug_log(
+                                    f"{__file__}:{430}",
+                                    "update_run_memory_with_ai 호출 후",
+                                    {"has_changes": has_changes},
+                                    "C"
+                                )
+                                # #endregion
                                 
                                 if has_changes:
                                     logger.debug(f"run_memory 수정사항 감지됨 (액션 처리 중)")
@@ -339,12 +500,99 @@ async def process_node_worker_async(run_id: UUID, node_id: UUID):
                                     process_pending_actions_worker.send(str(run_id))
                             except Exception as ai_e:
                                 logger.warning(f"run_memory 업데이트 실패 (계속 진행): {ai_e}")
+                                # #region agent log
+                                _debug_log(
+                                    f"{__file__}:{444}",
+                                    "run_memory 업데이트 예외 발생",
+                                    {"error": str(ai_e), "error_type": type(ai_e).__name__},
+                                    "C"
+                                )
+                                # #endregion
 
+                            # #region agent log
+                            _debug_log(
+                                f"{__file__}:{448}",
+                                "new_to_node_id 체크 전",
+                                {
+                                    "new_to_node_id": new_to_node_id,
+                                    "new_to_node_id_bool": bool(new_to_node_id),
+                                    "new_to_node_id_is_none": new_to_node_id is None,
+                                    "new_to_node_id_empty_str": new_to_node_id == ""
+                                },
+                                "D"
+                            )
+                            # #endregion
                             if new_to_node_id:
-                                new_node_uuid = UUID(new_to_node_id)
-                                if new_node_uuid != node_id: # 다른 노드로 이동한 경우
-                                    process_node_worker.send(str(run_id), str(new_node_uuid))
-                                    _log("NODE", run_id, f"새 노드 발견, 워커 생성: {new_node_uuid}", "INFO")
+                                try:
+                                    # #region agent log
+                                    _debug_log(
+                                        f"{__file__}:{430}",
+                                        "UUID 변환 시도 전",
+                                        {"new_to_node_id": new_to_node_id, "new_to_node_id_type": type(new_to_node_id).__name__},
+                                        "B"
+                                    )
+                                    # #endregion
+                                    new_node_uuid = UUID(new_to_node_id)
+                                    # #region agent log
+                                    _debug_log(
+                                        f"{__file__}:{433}",
+                                        "UUID 변환 성공",
+                                        {"new_node_uuid": str(new_node_uuid), "current_node_id": str(node_id), "is_different": str(new_node_uuid) != str(node_id)},
+                                        "B"
+                                    )
+                                    # #endregion
+                                    if new_node_uuid != node_id: # 다른 노드로 이동한 경우
+                                        _log("NODE", run_id, f"새 노드 워커 시작 시도: {new_node_uuid} (현재 노드: {node_id})", "INFO")
+                                        # #region agent log
+                                        _debug_log(
+                                            f"{__file__}:{439}",
+                                            "process_node_worker.send 호출 전",
+                                            {"run_id": str(run_id), "new_node_uuid": str(new_node_uuid)},
+                                            "E"
+                                        )
+                                        # #endregion
+                                        message = process_node_worker.send(str(run_id), str(new_node_uuid))
+                                        message_id = message.message_id if hasattr(message, 'message_id') else 'unknown'
+                                        # #region agent log
+                                        _debug_log(
+                                            f"{__file__}:{444}",
+                                            "process_node_worker.send 호출 후",
+                                            {"message_id": message_id, "message_type": type(message).__name__},
+                                            "E"
+                                        )
+                                        # #endregion
+                                        _log("NODE", run_id, f"새 노드 발견, 워커 생성 완료: {new_node_uuid} (message_id: {message_id})", "INFO")
+                                    else:
+                                        _log("NODE", run_id, f"같은 노드로 돌아옴, 워커 생성 스킵: {new_node_uuid}", "DEBUG")
+                                        # #region agent log
+                                        _debug_log(
+                                            f"{__file__}:{450}",
+                                            "같은 노드로 돌아옴",
+                                            {"new_node_uuid": str(new_node_uuid), "current_node_id": str(node_id)},
+                                            "B"
+                                        )
+                                        # #endregion
+                                except ValueError as uuid_error:
+                                    _log("NODE", run_id, f"to_node_id UUID 변환 실패: {new_to_node_id}, 에러: {uuid_error}", "ERROR")
+                                    logger.error(f"to_node_id UUID 변환 실패: run_id={run_id}, to_node_id={new_to_node_id}, error={uuid_error}", exc_info=True)
+                                    # #region agent log
+                                    _debug_log(
+                                        f"{__file__}:{456}",
+                                        "UUID 변환 실패",
+                                        {"new_to_node_id": new_to_node_id, "error": str(uuid_error)},
+                                        "B"
+                                    )
+                                    # #endregion
+                            else:
+                                _log("NODE", run_id, f"to_node_id가 None이거나 비어있음, 워커 생성 스킵", "DEBUG")
+                                # #region agent log
+                                _debug_log(
+                                    f"{__file__}:{463}",
+                                    "new_to_node_id가 None 또는 빈 값",
+                                    {"new_to_node_id": new_to_node_id, "is_none": new_to_node_id is None, "is_empty": new_to_node_id == ""},
+                                    "D"
+                                )
+                                # #endregion
                         
                     except Exception as action_e:
                         logger.error(f"액션 실행 중 에러: {action_e}", exc_info=True)

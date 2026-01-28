@@ -597,6 +597,44 @@ class EdgeService:
                     to_node_created = False
             
             to_node_id = UUID(to_node["id"])
+            to_node_url = to_node.get("url", "")
+            
+            # URL 범위 체크: target_url의 도메인과 다른 도메인으로 이동했는지 확인
+            from repositories.run_repository import get_run_by_id, update_run
+            run = get_run_by_id(run_id)
+            url_out_of_scope = False
+            if run:
+                target_url = run.get("target_url") or run.get("start_url", "")
+                if target_url:
+                    from urllib.parse import urlparse
+                    try:
+                        to_domain = urlparse(to_node_url).hostname or ""
+                        target_domain = urlparse(target_url).hostname or ""
+                        if to_domain and target_domain:
+                            to_domain = to_domain.lower().split(":")[0]  # 포트 제거
+                            target_domain = target_domain.lower().split(":")[0]  # 포트 제거
+                            if to_domain != target_domain:
+                                logger.warning(f"URL 범위 벗어남: {to_node_url} (target: {target_url}), Run 종료")
+                                update_run(run_id, {"status": "stopped"})
+                                action_result["outcome"] = "fail"
+                                action_result["error_msg"] = f"URL 범위 벗어남: {to_domain} != {target_domain}"
+                                to_node_id = None
+                                url_out_of_scope = True
+                    except Exception as domain_check_error:
+                        logger.debug(f"도메인 체크 실패 (계속 진행): {domain_check_error}")
+            
+            # URL 범위를 벗어난 경우 실패 엣지로 기록하고 종료
+            if url_out_of_scope:
+                return self.record_edge(
+                    run_id=run_id,
+                    from_node_id=from_node_id,
+                    to_node_id=None,
+                    action=action,
+                    outcome="fail",
+                    latency_ms=action_result["latency_ms"],
+                    error_msg=action_result["error_msg"],
+                    depth_diff_type=depth_diff_type
+                )
             
             # 같은 노드로 돌아온 경우 실패로 간주
             if to_node_id == from_node_id:
@@ -622,6 +660,41 @@ class EdgeService:
             else:
                 self.node_repo.update_node_depths(to_node_id, depths)
         
+        # #region agent log
+        import json
+        import time
+        import os
+        def _debug_log_edge(location: str, message: str, data: dict, hypothesis_id: str = None):
+            try:
+                log_path = "/Users/laxogud/MADCAMP/W3/backend/.cursor/debug.log"
+                os.makedirs(os.path.dirname(log_path), exist_ok=True)
+                log_entry = {
+                    "sessionId": "debug-session",
+                    "runId": "current",
+                    "hypothesisId": hypothesis_id,
+                    "location": location,
+                    "message": message,
+                    "data": data,
+                    "timestamp": int(time.time() * 1000)
+                }
+                with open(log_path, "a") as f:
+                    f.write(json.dumps(log_entry) + "\n")
+                    f.flush()
+            except Exception as e:
+                logger.error(f"디버그 로그 작성 실패: {e}", exc_info=True)
+        _debug_log_edge(
+            f"{__file__}:{663}",
+            "record_edge 호출 전",
+            {
+                "run_id": str(run_id),
+                "from_node_id": str(from_node_id),
+                "to_node_id": str(to_node_id) if to_node_id else None,
+                "to_node_id_is_none": to_node_id is None,
+                "outcome": action_result["outcome"]
+            },
+            "A"
+        )
+        # #endregion
         edge = self.record_edge(
             run_id=run_id,
             from_node_id=from_node_id,
@@ -632,6 +705,21 @@ class EdgeService:
             error_msg=action_result["error_msg"],
             depth_diff_type=depth_diff_type
         )
+        # #region agent log
+        _debug_log_edge(
+            f"{__file__}:{680}",
+            "record_edge 반환 후",
+            {
+                "edge": edge is not None,
+                "edge_id": edge.get("id") if edge else None,
+                "edge_outcome": edge.get("outcome") if edge else None,
+                "edge_to_node_id": edge.get("to_node_id") if edge else None,
+                "edge_to_node_id_type": type(edge.get("to_node_id")).__name__ if edge and edge.get("to_node_id") else None,
+                "edge_keys": list(edge.keys()) if edge else None
+            },
+            "A"
+        )
+        # #endregion
         
         # 엣지 생성 후 intent_label 생성 (from_node != to_node인 경우만)
         if edge and edge.get("from_node_id") and edge.get("to_node_id") and edge.get("from_node_id") != edge.get("to_node_id"):

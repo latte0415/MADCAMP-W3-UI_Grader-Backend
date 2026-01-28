@@ -13,8 +13,11 @@ project_root = Path(__file__).parent.parent
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
+# 로깅 시스템 초기화 (tasks 모듈 로드 시 명시적으로 초기화)
+from utils.logger import setup_logging, get_logger, set_context, clear_context
+setup_logging("INFO")
+
 from workers.broker import broker
-from utils.logger import get_logger, set_context, clear_context
 from exceptions.worker import WorkerTaskError
 from workers.handlers.common import _log, _run_async
 
@@ -49,6 +52,29 @@ def long_running_task(data: dict) -> dict:
 @dramatiq.actor(max_retries=2, time_limit=600000)
 def process_node_worker(run_id: str, node_id: str):
     """노드를 부여받은 워커"""
+    # #region agent log
+    try:
+        import json
+        import time
+        import os
+        log_path = "/Users/laxogud/MADCAMP/W3/backend/.cursor/debug.log"
+        os.makedirs(os.path.dirname(log_path), exist_ok=True)
+        log_entry = {
+            "sessionId": "debug-session",
+            "runId": "current",
+            "hypothesisId": "ENTRY",
+            "location": f"{__file__}:{49}",
+            "message": "process_node_worker 시작",
+            "data": {"run_id": run_id, "node_id": node_id},
+            "timestamp": int(time.time() * 1000)
+        }
+        with open(log_path, "a", encoding="utf-8") as f:
+            f.write(json.dumps(log_entry, ensure_ascii=False) + "\n")
+            f.flush()
+            os.fsync(f.fileno())
+    except Exception:
+        pass
+    # #endregion
     run_id_uuid = UUID(run_id)
     set_context(run_id=str(run_id_uuid), worker_type="NODE")
     logger.debug(f"워커 큐에서 메시지 수신: node_id={node_id}")
