@@ -39,9 +39,14 @@
 3. 서비스 이름: `api` (또는 원하는 이름)
 4. Root Directory: `/` (기본값)
 5. Build Command: (Dockerfile 사용 시 자동)
-6. Start Command: `sh -c 'uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}'`
+6. **Start Command 설정** (반드시 필요):
+   - Railway 대시보드 → API 서비스 → Settings → Deploy → Start Command
+   - `sh -c 'uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}'` 입력
 
-**참고**: Railway에서 환경 변수를 사용하려면 쉘(`sh -c`)을 통해 실행해야 합니다. `$PORT`를 직접 사용하면 문자열로 전달될 수 있습니다.
+**참고**: 
+- `railway.json`에는 Start Command를 설정하지 않습니다 (서비스별로 다르기 때문)
+- 각 서비스의 Railway 대시보드에서 개별적으로 Start Command를 설정해야 합니다
+- Railway에서 환경 변수를 사용하려면 쉘(`sh -c`)을 통해 실행해야 합니다
 
 **환경 변수 설정:**
 API 서비스의 "Variables" 탭에서 다음 변수들을 설정합니다:
@@ -82,7 +87,7 @@ API 서비스의 "Variables" 탭에서 다음 변수들을 설정합니다:
 **API 서비스 Start Command 설정:**
 - Railway 대시보드 → API 서비스 → Settings → Deploy → Start Command
 - `sh -c 'uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}'` 입력
-- 또는 `railway.json` 파일이 있으면 자동으로 적용됩니다
+- **중요**: `railway.json`에는 Start Command를 설정하지 않으므로, 각 서비스에서 개별적으로 설정해야 합니다
 
 **환경 변수 설정:**
 워커 서비스의 "Variables" 탭에서 다음 변수들을 설정합니다:
@@ -90,10 +95,14 @@ API 서비스의 "Variables" 탭에서 다음 변수들을 설정합니다:
 - `SUPABASE_URL`: API 서비스와 동일한 값
 - `SUPABASE_SERVICE_KEY`: API 서비스와 동일한 값
 - `OPENAI_API_KEY`: API 서비스와 동일한 값
-- `REDIS_URL`: API 서비스와 동일한 Redis URL (같은 Redis 인스턴스 사용)
+- `REDIS_URL`: **반드시 설정 필요!** API 서비스와 동일한 Redis URL (같은 Redis 인스턴스 사용)
+  - Redis 서비스의 "Variables" 탭에서 `REDIS_URL` 값을 복사하여 설정
+  - 이 값이 없으면 워커가 `localhost:6379`로 연결을 시도하여 실패합니다
 - `LANGCHAIN_TRACING`: API 서비스와 동일한 값 (선택적)
 - `LANGCHAIN_API_KEY`: API 서비스와 동일한 값 (선택적)
 - `WORKER_AUTO_START`: 설정하지 않음 (워커 서비스이므로 불필요)
+
+**중요**: `REDIS_URL`은 반드시 설정해야 합니다. 설정하지 않으면 워커가 Redis에 연결할 수 없습니다.
 
 **팁**: 환경 변수를 프로젝트 레벨에서 설정하면 모든 서비스에서 공유할 수 있습니다:
 1. 프로젝트 설정 → "Variables" 탭
@@ -236,7 +245,7 @@ API 서비스의 "Variables" 탭에서 다음 변수들을 설정합니다:
    - Railway 서비스의 리소스 할당량 확인
    - 필요시 더 큰 인스턴스로 업그레이드
 
-### 문제: Worker 서비스에서 "uvicorn could not be found" 오류
+### 문제: Worker 서비스에서 "uvicorn could not be found" 오류 또는 워커가 main.py를 실행함
 
 **원인:**
 - Worker 서비스의 Start Command가 설정되지 않아 Dockerfile의 기본 CMD(`uvicorn`)가 실행됨
@@ -245,12 +254,31 @@ API 서비스의 "Variables" 탭에서 다음 변수들을 설정합니다:
 **해결책:**
 1. Railway 대시보드에서 Worker 서비스 선택
 2. "Settings" → "Deploy" 섹션으로 이동
-3. "Start Command" 필드에 `python -m workers.worker` 입력
+3. "Start Command" 필드에 `python -m workers.worker` 입력 (반드시 확인!)
 4. "Deploy" 버튼 클릭하여 재배포
 
 **확인:**
 - Worker 서비스의 로그에서 "워커 프로세스 시작" 메시지 확인
 - "등록된 액터" 목록이 표시되는지 확인
+- 로그에 "CORS 설정"이나 "Uvicorn running" 메시지가 있으면 잘못된 것입니다 (워커는 uvicorn을 실행하지 않음)
+
+### 문제: Worker 서비스에서 "Connection refused" 또는 "Error 111 connecting to localhost:6379" 오류
+
+**원인:**
+- `REDIS_URL` 환경 변수가 설정되지 않아 기본값(`localhost:6379`)을 사용하려고 함
+- Railway의 Redis 서비스 URL이 설정되지 않음
+
+**해결책:**
+1. Railway 대시보드에서 Redis 서비스 선택
+2. "Variables" 탭에서 `REDIS_URL` 값을 복사
+3. Worker 서비스 선택 → "Variables" 탭으로 이동
+4. `REDIS_URL` 변수를 추가하고 Redis 서비스의 URL을 붙여넣기
+5. API 서비스와 동일한 `REDIS_URL`을 사용하는지 확인
+6. 재배포 (환경 변수 변경 시 자동 재배포됨)
+
+**확인:**
+- Worker 서비스의 로그에서 Redis 연결 오류가 사라졌는지 확인
+- "워커 프로세스 시작" 메시지와 "등록된 액터" 목록 확인
 
 ### 문제: API 서비스에서 "on_event is deprecated" 경고
 

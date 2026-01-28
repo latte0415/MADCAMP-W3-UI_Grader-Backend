@@ -27,9 +27,17 @@ async def lifespan(app: FastAPI):
     start_worker_background()
     
     # 주기적 완료 체크 워커 시작 (앱 시작 시 한 번만)
+    # Redis 연결이 가능한 경우에만 실행 (워커 서비스에서는 실행되지 않음)
     try:
         from workers.tasks import periodic_completion_check_worker
         from services.graph_completion_service import CHECK_INTERVAL_SECONDS
+        
+        # Redis 연결 확인 (연결 불가능하면 스킵)
+        import redis
+        redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+        test_redis = redis.from_url(redis_url, socket_connect_timeout=2)
+        test_redis.ping()
+        test_redis.close()
         
         # 첫 번째 체크는 10초 후에 시작 (앱 초기화 시간 확보)
         periodic_completion_check_worker.send_with_options(
@@ -38,7 +46,8 @@ async def lifespan(app: FastAPI):
         )
         logger.info(f"주기적 완료 체크 워커 시작됨 (첫 체크: 10초 후, 이후 {CHECK_INTERVAL_SECONDS}초마다)")
     except Exception as e:
-        logger.error(f"주기적 완료 체크 워커 시작 실패: {e}", exc_info=True)
+        # Redis 연결 실패 시 로그만 남기고 계속 진행 (워커 서비스에서는 정상)
+        logger.debug(f"주기적 완료 체크 워커 시작 스킵 (Redis 연결 불가 또는 워커 서비스): {e}")
     
     yield
     
