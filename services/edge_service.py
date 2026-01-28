@@ -31,21 +31,23 @@ class EdgeService:
         self.node_repo = node_repo or node_repository
         self.node_service = node_service
     
-    def is_duplicate_action(self, run_id: UUID, from_node_id: UUID, action: Dict) -> Optional[Dict]:
+    def is_duplicate_action(self, run_id: UUID, from_node_id: UUID, action: Dict, check_failed: bool = False) -> Optional[Dict]:
         """
-        중복 액션 여부 확인 (성공한 엣지만 체크)
+        중복 액션 여부 확인
         
         Args:
             run_id: 탐색 세션 ID
             from_node_id: 시작 노드 ID
             action: 액션 딕셔너리
+            check_failed: 실패한 엣지도 체크할지 여부 (기본값: False - 성공한 엣지만 체크)
         
         Returns:
-            기존 엣지 데이터 또는 None (성공한 엣지만 반환)
+            기존 엣지 데이터 또는 None
         """
         action_value = action.get("action_value", "") or ""
-        # 성공한 엣지만 중복으로 체크 (실패한 액션은 재시도 허용)
-        return self.edge_repo.find_duplicate_edge(
+        
+        # 성공한 엣지 먼저 체크
+        existing_success = self.edge_repo.find_duplicate_edge(
             run_id,
             from_node_id,
             action["action_type"],
@@ -53,6 +55,27 @@ class EdgeService:
             action_value,
             outcome="success"  # 성공한 엣지만 중복으로 체크
         )
+        if existing_success:
+            return existing_success
+        
+        # 실패한 엣지도 체크하는 경우
+        if check_failed:
+            # 실패한 엣지가 있으면 무조건 중복으로 간주 (재시도 제한과 별개로)
+            # 같은 액션을 여러 번 실패한 경우 중복 실행 방지
+            existing_failed = self.edge_repo.find_duplicate_edge(
+                run_id,
+                from_node_id,
+                action["action_type"],
+                action["action_target"],
+                action_value,
+                outcome="fail"
+            )
+            if existing_failed:
+                # 재시도 제한을 넘지 않은 경우에도 중복으로 간주
+                # (재시도 제한은 별도로 체크하므로 여기서는 중복 여부만 확인)
+                return existing_failed
+        
+        return None
     
     async def perform_action(self, page: Page, action: Dict) -> Dict:
         """
@@ -65,6 +88,8 @@ class EdgeService:
         Returns:
             {outcome, latency_ms, error_msg}
         """
+        import urllib.parse
+        
         start_time = time.time()
         error_msg = None
         outcome = "success"
@@ -79,46 +104,85 @@ class EdgeService:
             if action_type == "click":
                 href = action.get("href")
                 before_url = page.url  # 클릭 전 URL 저장
+                
                 # role과 name이 있으면 우선 사용 (가장 정확함)
+                clicked = False
                 if role and name:
-                    locator = page.get_by_role(role, name=name)
-                    await locator.evaluate("el => el.scrollIntoView({block: 'center'})")
                     try:
+                        locator = page.get_by_role(role, name=name)
+                        # strict mode 체크: 요소가 여러 개면 에러 발생 -> first로 처리
+                        count = await locator.count()
+                        if count > 1:
+                            logger.warning(f"Strict mode risk: {count} elements found for role={role} name={name}. Using first.")
+                            locator = locator.first
+                        
+                        await locator.evaluate("el => el.scrollIntoView({block: 'center'})")
                         await locator.click(force=True, timeout=5000)
-                    except Exception:
-                        # viewport 이슈 fallback: JS click
-                        await locator.evaluate("el => el.click()")
-                elif selector:
-                    await page.wait_for_selector(selector, timeout=5000, state="attached")
-                    locator = page.locator(selector).first
-                    await locator.evaluate("el => el.scrollIntoView({block: 'center'})")
+                        clicked = True
+                    except Exception as e:
+                        logger.warning(f"Click by role failed: {e}. Trying selector fallback.")
+                
+                # role/name 실패하거나 없는 경우 selector 사용
+                if not clicked and selector:
                     try:
+                        await page.wait_for_selector(selector, timeout=5000, state="attached")
+                        locator = page.locator(selector).first
+                        await locator.evaluate("el => el.scrollIntoView({block: 'center'})")
                         await locator.click(force=True, timeout=5000)
-                    except Exception:
+                        clicked = True
+                    except Exception as e:
+                        logger.warning(f"Click by selector failed: {e}. Trying JS fallback.")
                         # viewport 이슈 fallback: JS click
-                        await locator.evaluate("el => el.click()")
-                else:
-                    raise Exception("click: 대상 요소를 찾을 수 없습니다.")
-                # URL 변경이 없으면 href로 직접 이동 시도
+                        try:
+                            await page.locator(selector).first.evaluate("el => el.click()")
+                            clicked = True
+                        except Exception:
+                            pass
+
+                if not clicked and not href:
+                     # 모든 시도 실패
+                     raise Exception("click: 대상 요소를 찾을 수 없거나 클릭할 수 없습니다.")
+                
+                # URL 변경이 없으면 href로 직접 이동 시도 (JS click 실패 시 등)
                 if href and page.url == before_url:
-                    await page.goto(href, wait_until="networkidle")
+                    # 상대 경로 처리 (invalid URL 에러 방지)
+                    absolute_href = urllib.parse.urljoin(page.url, href)
+                    # 현재 페이지와 같으면 이동 안 함 (하지만 hash 변경 등은 이동 필요할 수 있음)
+                    # href가 javascript: 등이 아닌 경우에만 이동
+                    if not href.startswith(("javascript:", "mailto:", "tel:")):
+                        try:
+                             await page.goto(absolute_href, wait_until="networkidle")
+                        except Exception as e:
+                             logger.warning(f"Fallback navigation to {absolute_href} failed: {e}")
+
                 # SPA에서 URL 변화 없이 DOM만 바뀌는 케이스 대비
                 # 네트워크 상태가 안정화될 때까지 대기 (타임아웃 명시)
                 try:
-                    await page.wait_for_load_state("networkidle", timeout=10000)  # 5초 → 10초로 증가
+                    await page.wait_for_load_state("networkidle", timeout=10000)
                 except Exception:
-                    # 타임아웃이어도 계속 진행 (일부 페이지는 networkidle에 도달하지 않을 수 있음)
                     pass
-                # 추가 안정화 대기 시간 (최적화: 1500ms → 1000ms)
+                # 추가 안정화 대기 시간
                 await page.wait_for_timeout(1000)
+
             elif action_type == "hover":
                 if role and name:
-                    await page.get_by_role(role, name=name).hover()
+                    try:
+                        locator = page.get_by_role(role, name=name)
+                        count = await locator.count()
+                        if count > 1:
+                            locator = locator.first
+                        await locator.hover()
+                    except Exception:
+                        if selector:
+                            await page.hover(selector)
+                        else:
+                            raise
                 elif selector:
                     await page.hover(selector)
                 else:
                     raise Exception("hover: 대상 요소를 찾을 수 없습니다.")
                 await page.wait_for_timeout(400)
+
             elif action_type == "fill":
                 filled_element = None
                 filled_locator = None
@@ -209,7 +273,6 @@ class EdgeService:
                     pass
                 
                 # 입력값이 실제로 반영되었는지 확인
-                # React 같은 프레임워크의 경우 상태 업데이트를 기다리기 위해 최대 2초 대기
                 max_wait_time = 2000  # 2초
                 wait_interval = 100  # 100ms마다 확인
                 waited = 0
@@ -229,51 +292,47 @@ class EdgeService:
                         # 확인 실패 시 계속 진행
                         pass
                 
-                # 추가 안정화 대기 시간 (입력 후 폼 검증, 버튼 활성화 등이 실행될 수 있음)
-                # React 같은 프레임워크에서는 상태 업데이트가 비동기로 일어날 수 있으므로 충분한 대기 필요
+                # 추가 안정화 대기 시간
                 if value_matched:
-                    # 값이 반영되었으면 폼 검증 완료를 위해 추가 대기
-                    await page.wait_for_timeout(800)  # 800ms 대기
+                    await page.wait_for_timeout(800)
                 else:
-                    # 값이 반영되지 않았어도 최소 대기
-                    await page.wait_for_timeout(500)  # 500ms 대기
+                    await page.wait_for_timeout(500)
                 
-                # 비밀번호 필드인지 확인 (input_type 확인)
+                # 비밀번호 필드인지 확인
                 is_password_field = False
                 actual_stored_value = None
                 if filled_element:
                     try:
                         input_type = await filled_element.evaluate("el => el.type")
                         is_password_field = (input_type == "password")
-                        # 실제로 저장된 값 읽기 (collect_input_values에서 읽을 값과 동일)
                         if is_password_field:
                             actual_stored_value = await filled_element.evaluate("el => el.value")
                     except Exception:
-                        # input_type 확인 실패 시 action의 input_type 사용
                         is_password_field = (action.get("input_type", "") == "password")
                 
-                # latency_ms 계산 (비밀번호 필드인 경우에도 정상적으로 채워야 하므로 여기서 계산)
                 latency_ms = int((time.time() - start_time) * 1000)
                 
-                # 비밀번호 필드인 경우 collect_input_values와 동일한 방식으로 해시화하여 반환 (역해시 딕셔너리용)
                 if is_password_field and action_value and actual_stored_value:
                     import hashlib
-                    # collect_input_values와 동일한 방식으로 해시화
-                    # (실제 저장된 값을 해시화 - collect_input_values에서도 같은 값을 읽어서 해시화함)
                     value_hash = hashlib.sha256(actual_stored_value.encode()).hexdigest()[:16]
                     return {
                         "outcome": outcome,
                         "latency_ms": latency_ms,
                         "error_msg": error_msg,
-                        "password_hash": value_hash,  # collect_input_values에서 생성한 해시와 동일한 값
-                        "password_value": action_value  # 원본 입력 값 저장 (복원용)
+                        "password_hash": value_hash,
+                        "password_value": action_value
                     }
+
             elif action_type == "navigate":
-                await page.goto(action_value, wait_until="networkidle")
+                target_url = urllib.parse.urljoin(page.url, action_value)
+                await page.goto(target_url, wait_until="networkidle")
+
             elif action_type == "wait":
                 await page.wait_for_load_state("networkidle")
+
             else:
                 raise Exception(f"알 수 없는 action_type: {action_type}")
+
         except Exception as e:
             outcome = "fail"
             error_msg = str(e)
@@ -310,10 +369,62 @@ class EdgeService:
             엣지 정보 딕셔너리
         """
         # record_edge 호출 시점에서도 중복 체크 (안전장치)
-        existing = self.is_duplicate_action(run_id, from_node_id, action)
+        # 실패한 엣지도 체크하여 중복 방지
+        existing = self.is_duplicate_action(run_id, from_node_id, action, check_failed=True)
         if existing:
-            logger.debug(f"중복 액션 발견 (record_edge 시점): run_id={run_id}, from_node={from_node_id}, action={action.get('action_type')} / {action.get('action_target', '')[:50]}, existing_edge_id={existing.get('id')}")
+            existing_outcome = existing.get("outcome", "unknown")
+            logger.debug(f"중복 액션 발견 (record_edge 시점): run_id={run_id}, from_node={from_node_id}, action={action.get('action_type')} / {action.get('action_target', '')[:50]}, existing_edge_id={existing.get('id')}, outcome={existing_outcome}")
             return existing
+        
+        # 실패한 엣지의 경우 재시도 제한 체크
+        if outcome == "fail":
+            MAX_FAILED_RETRIES = 3
+            action_type = action.get("action_type", "")
+            action_target = action.get("action_target", "")
+            action_value = action.get("action_value", "") or ""
+            
+            # 현재 생성하려는 엣지를 포함하여 카운트 (이미 생성된 엣지만 카운트)
+            failed_count = self.edge_repo.count_failed_edges(
+                run_id, from_node_id, action_type, action_target, action_value
+            )
+            
+            # 재시도 제한을 넘은 경우, 가장 최근 실패한 엣지를 반환 (중복 방지)
+            # failed_count가 이미 MAX_FAILED_RETRIES 이상이면 새 엣지를 생성하지 않음
+            if failed_count >= MAX_FAILED_RETRIES:
+                logger.warning(f"실패한 액션 재시도 제한 초과 ({failed_count}회 >= {MAX_FAILED_RETRIES}회), 기존 실패 엣지 반환: run_id={run_id}, from_node={from_node_id}, action={action_type} / {action_target[:50]}")
+                # 가장 최근 실패한 엣지 조회 (created_at 기준으로 최신순 정렬)
+                existing_failed = self.edge_repo.find_duplicate_edge(
+                    run_id, from_node_id, action_type, action_target, action_value, outcome="fail"
+                )
+                if existing_failed:
+                    logger.debug(f"기존 실패 엣지 반환: edge_id={existing_failed.get('id')}, created_at={existing_failed.get('created_at')}")
+                    return existing_failed
+                else:
+                    # 기존 실패 엣지를 찾을 수 없는 경우 (이상하지만) 새 엣지 생성 허용
+                    logger.warning(f"기존 실패 엣지를 찾을 수 없음 (새 엣지 생성 허용): run_id={run_id}, from_node={from_node_id}, action={action_type} / {action_target[:50]}")
+        
+        # 엣지 생성 직전에 다시 한 번 재시도 제한 체크 (double-check)
+        # 다른 워커가 동시에 엣지를 생성했을 수 있으므로
+        if outcome == "fail":
+            MAX_FAILED_RETRIES = 3
+            action_type = action.get("action_type", "")
+            action_target = action.get("action_target", "")
+            action_value = action.get("action_value", "") or ""
+            
+            # 다시 한 번 실패한 엣지 개수 확인
+            failed_count_after_check = self.edge_repo.count_failed_edges(
+                run_id, from_node_id, action_type, action_target, action_value
+            )
+            
+            # 재시도 제한을 넘은 경우, 기존 실패 엣지 반환
+            if failed_count_after_check >= MAX_FAILED_RETRIES:
+                logger.warning(f"엣지 생성 직전 재시도 제한 재확인 ({failed_count_after_check}회 >= {MAX_FAILED_RETRIES}회), 기존 실패 엣지 반환: run_id={run_id}, from_node={from_node_id}, action={action_type} / {action_target[:50]}")
+                existing_failed = self.edge_repo.find_duplicate_edge(
+                    run_id, from_node_id, action_type, action_target, action_value, outcome="fail"
+                )
+                if existing_failed:
+                    logger.debug(f"기존 실패 엣지 반환 (double-check): edge_id={existing_failed.get('id')}, created_at={existing_failed.get('created_at')}")
+                    return existing_failed
         
         action_value = action.get("action_value", "") or ""
         edge_data = {
@@ -365,11 +476,32 @@ class EdgeService:
             엣지 정보 딕셔너리
         """
         # 워커 생성 시점과 실행 시점 사이에 다른 워커가 같은 액션을 실행했을 수 있으므로
-        # 실행 시점에서 다시 중복 체크를 수행
-        existing = self.is_duplicate_action(run_id, from_node_id, action)
+        # 실행 시점에서 다시 중복 체크를 수행 (실패한 엣지도 체크)
+        existing = self.is_duplicate_action(run_id, from_node_id, action, check_failed=True)
         if existing:
-            logger.debug(f"중복 액션 발견 (실행 시점): run_id={run_id}, from_node={from_node_id}, action={action.get('action_type')} / {action.get('action_target', '')[:50]}, existing_edge_id={existing.get('id')}")
+            existing_outcome = existing.get("outcome", "unknown")
+            logger.debug(f"중복 액션 발견 (실행 시점): run_id={run_id}, from_node={from_node_id}, action={action.get('action_type')} / {action.get('action_target', '')[:50]}, existing_edge_id={existing.get('id')}, outcome={existing_outcome}")
             return existing
+        
+        # 실패한 액션의 재시도 제한 체크 (실행 전에 체크하여 불필요한 실행 방지)
+        MAX_FAILED_RETRIES = 3
+        action_type = action.get("action_type", "")
+        action_target = action.get("action_target", "")
+        action_value = action.get("action_value", "") or ""
+        
+        failed_count = self.edge_repo.count_failed_edges(
+            run_id, from_node_id, action_type, action_target, action_value
+        )
+        
+        # 재시도 제한을 넘은 경우, 가장 최근 실패한 엣지를 반환 (중복 방지)
+        if failed_count >= MAX_FAILED_RETRIES:
+            logger.warning(f"실패한 액션 재시도 제한 초과 ({failed_count}회 >= {MAX_FAILED_RETRIES}회), 기존 실패 엣지 반환: run_id={run_id}, from_node={from_node_id}, action={action_type} / {action_target[:50]}")
+            # 가장 최근 실패한 엣지 조회
+            existing_failed = self.edge_repo.find_duplicate_edge(
+                run_id, from_node_id, action_type, action_target, action_value, outcome="fail"
+            )
+            if existing_failed:
+                return existing_failed
         
         # node_service가 주입된 경우 사용, 없으면 node_repo 직접 사용
         before_node = None

@@ -48,7 +48,9 @@ def find_duplicate_edge(
     result = query.execute()
     
     if result.data and len(result.data) > 0:
-        return result.data[0]
+        # 여러 개의 엣지가 있으면 가장 최근 것(created_at 기준)을 반환
+        sorted_data = sorted(result.data, key=lambda x: x.get("created_at", ""), reverse=True)
+        return sorted_data[0]
     return None
 
 
@@ -215,3 +217,81 @@ def get_edges_by_run_id(run_id: UUID) -> List[Dict]:
     supabase = get_client()
     result = supabase.table("edges").select("*").eq("run_id", str(run_id)).order("created_at").execute()
     return result.data or []
+
+
+def count_edges_by_run_id(run_id: UUID) -> int:
+    """
+    run_id로 엣지 개수 조회
+    
+    Args:
+        run_id: 탐색 세션 ID
+    
+    Returns:
+        엣지 개수
+    """
+    supabase = get_client()
+    result = supabase.table("edges").select("id", count="exact").eq("run_id", str(run_id)).execute()
+    return result.count if result.count is not None else 0
+
+
+def count_recent_edges_by_run_id(run_id: UUID, seconds: int) -> int:
+    """
+    run_id로 최근 N초 동안 생성된 엣지 개수 조회
+    
+    Args:
+        run_id: 탐색 세션 ID
+        seconds: 최근 N초
+    
+    Returns:
+        최근 엣지 개수
+    """
+    from datetime import datetime, timedelta
+    
+    supabase = get_client()
+    threshold_time = datetime.utcnow() - timedelta(seconds=seconds)
+    threshold_time_str = threshold_time.isoformat() + "Z"
+    
+    result = supabase.table("edges").select(
+        "id", count="exact"
+    ).eq("run_id", str(run_id)).gte("created_at", threshold_time_str).execute()
+    
+    return result.count if result.count is not None else 0
+
+
+def count_success_edges_by_run_id(run_id: UUID) -> int:
+    """
+    run_id로 성공한 엣지 개수 조회
+    
+    Args:
+        run_id: 탐색 세션 ID
+    
+    Returns:
+        성공한 엣지 개수
+    """
+    supabase = get_client()
+    result = supabase.table("edges").select("id", count="exact").eq("run_id", str(run_id)).eq("outcome", "success").execute()
+    return result.count if result.count is not None else 0
+
+
+def count_recent_success_edges_by_run_id(run_id: UUID, seconds: int) -> int:
+    """
+    run_id로 최근 N초 동안 생성된 성공한 엣지 개수 조회
+    
+    Args:
+        run_id: 탐색 세션 ID
+        seconds: 최근 N초
+    
+    Returns:
+        최근 성공한 엣지 개수
+    """
+    from datetime import datetime, timedelta
+    
+    supabase = get_client()
+    threshold_time = datetime.utcnow() - timedelta(seconds=seconds)
+    threshold_time_str = threshold_time.isoformat() + "Z"
+    
+    result = supabase.table("edges").select(
+        "id", count="exact"
+    ).eq("run_id", str(run_id)).eq("outcome", "success").gte("created_at", threshold_time_str).execute()
+    
+    return result.count if result.count is not None else 0

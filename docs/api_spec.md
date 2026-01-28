@@ -261,10 +261,142 @@ Run 모니터링 데이터를 조회합니다.
 
 #### 구현 요구사항
 1. 인증: Supabase JWT 토큰에서 `user_id` 추출
-2. 필터링: `runs` 테이블의 `metadata->>user_id`로 해당 사용자의 runs만 조회
+2. 필터링: `runs` 테이블의 `user_id` 컬럼으로 해당 사용자의 runs만 조회
 3. 조인: `status`가 `completed`인 경우 `site_evaluations`와 조인하여 평가 정보 포함
 4. 정렬: 기본적으로 `created_at` 내림차순
 5. execution_time: `completed_at`과 `created_at`의 차이를 초 단위로 계산 (완료된 경우만)
+
+### 5-1. `GET /api/runs/{run_id}/evaluation-result`
+
+특정 run_id의 평가 결과 JSON을 조회합니다.
+
+#### 경로 파라미터
+
+- `run_id` (required): 평가 실행 ID (UUID)
+
+#### 응답 형식
+
+```json
+{
+  "run_id": "string (UUID)",
+  "status": "running" | "completed" | "failed" | "stopped",
+  "evaluation_result": {
+    "run_id": "string (UUID)",
+    "timestamp": "ISO 8601 datetime string",
+    "total_score": "number (0-100)",
+    "category_scores": {
+      "learnability": "number (0-100)",
+      "efficiency": "number (0-100)",
+      "control": "number (0-100)"
+    },
+    "summary": {
+      "node_count": "number",
+      "edge_count": "number",
+      "path_count": "number"
+    },
+    "details": {
+      "static_analysis": [
+        {
+          "node_id": "string (UUID)",
+          "url": "string",
+          "result": {
+            "learnability": {
+              "score": "number (0-100)",
+              "items": "array",
+              "passed": "array",
+              "failed": "array"
+            },
+            "control": {
+              "score": "number (0-100)",
+              "items": "array",
+              "passed": "array",
+              "failed": "array"
+            }
+          }
+        }
+      ],
+      "transition_analysis": [
+        {
+          "edge_id": "string (UUID)",
+          "action": "string",
+          "result": {
+            "efficiency": {
+              "score": "number (0-100)",
+              "latency": {
+                "duration_ms": "number",
+                "status": "string",
+                "description": "string"
+              },
+              "passed": "array",
+              "failed": "array"
+            },
+            "control": {
+              "score": "number (0-100)",
+              "passed": "array",
+              "failed": "array"
+            }
+          }
+        }
+      ],
+      "workflow_analysis": [
+        {
+          "path_index": "number",
+          "path_summary": "string",
+          "result": {
+            "efficiency": {
+              "score": "number (0-100)",
+              "passed": "array",
+              "failed": "array"
+            }
+          }
+        }
+      ]
+    }
+  }
+}
+```
+
+#### 응답 예시
+
+```json
+{
+  "run_id": "667d1815-7718-40fc-bd95-c98101a11ac5",
+  "status": "completed",
+  "evaluation_result": {
+    "run_id": "667d1815-7718-40fc-bd95-c98101a11ac5",
+    "timestamp": "2026-01-27T17:36:35.344603+00:00",
+    "total_score": 55.9,
+    "category_scores": {
+      "learnability": 66.2,
+      "efficiency": 48.5,
+      "control": 52.9
+    },
+    "summary": {
+      "node_count": 19,
+      "edge_count": 239,
+      "path_count": 0
+    },
+    "details": {
+      "static_analysis": [...],
+      "transition_analysis": [...],
+      "workflow_analysis": [...]
+    }
+  }
+}
+```
+
+#### HTTP 상태 코드
+
+- `200 OK`: 평가 결과 조회 성공
+- `404 Not Found`: run_id에 해당하는 Run을 찾을 수 없거나 평가 결과가 없음
+- `500 Internal Server Error`: 서버 오류
+
+#### 중요 사항
+
+- 평가가 아직 완료되지 않은 경우 `404 Not Found`를 반환합니다.
+- `evaluation_result`는 `runs` 테이블의 `evaluation_result_json` 컬럼에 저장된 전체 분석 결과 JSON입니다.
+- 이 엔드포인트는 평가 완료된 전체 JSON 결과를 그대로 반환합니다.
+- 평가 결과는 `run_full_analysis_worker`가 실행될 때 `runs` 테이블에 자동으로 저장됩니다.
 
 ## 사이트 평가 API 엔드포인트
 
