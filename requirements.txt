@@ -13,3 +13,9 @@ openai>=1.0.0
 python-dotenv>=1.0.0
 numpy>=1.24.0
 supabase>=2.0.0
+langchain==0.3.25
+langchain-core==0.3.64
+langchain-openai==0.3.21
+langchain-community==0.3.24
+dramatiq[redis]>=1.15.0
+redis>=5.0.0

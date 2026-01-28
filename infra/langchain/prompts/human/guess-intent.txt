@@ -1,0 +1,16 @@
+다음 엣지 정보를 바탕으로 액션의 의도를 파악해줘.
+
+시작 노드 (from_node):
+- URL: {from_node_url}
+- URL (정규화): {from_node_url_normalized}
+
+도착 노드 (to_node):
+- URL: {to_node_url}
+- URL (정규화): {to_node_url_normalized}
+
+엣지 정보 (edge):
+- 액션 타입: {action_type}
+- 액션 대상: {action_target}
+- 액션 값: {action_value}
+
+위 정보를 바탕으로 이 엣지가 가리키는 액션의 의도를 15자 이내로 짧게 표현해줘.

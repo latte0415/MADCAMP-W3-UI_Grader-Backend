@@ -42,9 +42,15 @@ CREATE TABLE nodes (
 
     -- 원본 아티팩트 경로 (파일 저장소 참조)
     dom_snapshot_ref TEXT,  -- DOM 스냅샷 파일 경로
+    css_snapshot_ref TEXT,  -- CSS 스냅샷 파일 경로
     a11y_snapshot_ref TEXT,  -- 접근성 스냅샷 파일 경로
     screenshot_ref TEXT,  -- 스크린샷 파일 경로
     storage_ref TEXT,  -- storageState 원본 파일 경로
+
+    -- 그래프 뎁스 메타 (노드 기준)
+    route_depth INT DEFAULT 0,
+    modal_depth INT DEFAULT 0,
+    interaction_depth INT DEFAULT 0,
 
     created_at TIMESTAMPTZ DEFAULT NOW(),
 
@@ -77,9 +83,9 @@ CREATE TABLE edges (
     from_node_id UUID NOT NULL REFERENCES nodes(id) ON DELETE CASCADE,
     to_node_id UUID REFERENCES nodes(id) ON DELETE SET NULL,  -- 실패 케이스도 기록 가능 (NULL 허용)
 
-    action_type VARCHAR(20) NOT NULL CHECK (action_type IN ('click', 'fill', 'navigate', 'scroll', 'keyboard', 'wait')),
+    action_type VARCHAR(20) NOT NULL CHECK (action_type IN ('click', 'fill', 'navigate', 'scroll', 'keyboard', 'wait', 'hover')),
     action_target TEXT NOT NULL,  -- 가능하면 selector보다 role+name 같이 저장 (예: "button[name='로그인']")
-    action_value TEXT,  -- 입력 값 (fill 액션의 경우)
+    action_value TEXT DEFAULT '',  -- 입력 값 (fill 액션의 경우)
 
     cost NUMERIC NOT NULL DEFAULT 1,  -- 액션 비용 (Interaction Efficiency 평가용)
     latency_ms INT,  -- action 수행~안정화까지 소요 시간 (System Latency 평가용)
@@ -92,10 +98,13 @@ CREATE TABLE edges (
     dom_diff_ref TEXT,  -- DOM 변화 diff 파일 경로
     network_summary_ref TEXT,  -- 네트워크 요약 정보 파일 경로
 
+    -- 그래프 확장/뎁스 변화 타입
+    depth_diff_type VARCHAR(30) CHECK (depth_diff_type IN ('same_node', 'interaction_only', 'new_page', 'modal_overlay', 'drawer')),
+
     created_at TIMESTAMPTZ DEFAULT NOW(),
 
     CONSTRAINT edges_dedupe UNIQUE (
-        run_id, from_node_id, to_node_id, action_type, action_target, COALESCE(action_value, '')
+        run_id, from_node_id, to_node_id, action_type, action_target, action_value
     )
 );
 
@@ -117,6 +126,47 @@ CREATE INDEX idx_edges_cost ON edges(cost);
 - `error_msg`: 에러 메시지 (Error reporting, diagnosis 평가)
 - `intent_label`: LLM이 파악한 액션 의도 (Clarity & Affordance 평가)
 - `*_ref`: 원본 데이터는 파일로 저장하고 경로만 참조
+
+## run_memory 테이블
+런 단위 자연어 메모리를 저장합니다. AI filter-action, update-run-memory 등에서 사용합니다.
+
+```sql
+CREATE TABLE IF NOT EXISTS run_memory (
+    run_id UUID PRIMARY KEY REFERENCES runs(id) ON DELETE CASCADE,
+    content JSONB NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_run_memory_content ON run_memory USING GIN (content);
+```
+
+- `run_id`: 탐색 세션 ID (PK)
+- `content`: JSONB 메모리 (예: `{"login_page": "로그인 페이지 설명", "생성한 ID": "예시"}`)
+
+## pending_actions 테이블
+입력값 부족 등으로 당장 처리할 수 없는 액션을 나중에 처리하기 위해 보관합니다.
+
+```sql
+CREATE TABLE IF NOT EXISTS pending_actions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    run_id UUID NOT NULL REFERENCES runs(id) ON DELETE CASCADE,
+    from_node_id UUID NOT NULL REFERENCES nodes(id) ON DELETE CASCADE,
+    action_type VARCHAR(20) NOT NULL CHECK (action_type IN ('click', 'fill', 'navigate', 'scroll', 'keyboard', 'wait', 'hover')),
+    action_target TEXT NOT NULL,
+    action_value TEXT DEFAULT '',
+    status VARCHAR(20) NOT NULL DEFAULT 'pending',
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_pending_actions_run ON pending_actions(run_id);
+CREATE INDEX IF NOT EXISTS idx_pending_actions_from_node ON pending_actions(from_node_id);
+CREATE INDEX IF NOT EXISTS idx_pending_actions_status ON pending_actions(status);
+```
+
+- `run_id`, `from_node_id`: 탐색 세션 및 시작 노드
+- `action_type`, `action_target`, `action_value`: 액션 정보
+- `status`: `pending` 등
 
 ## 사용 예시
 
@@ -181,7 +231,7 @@ FROM nodes
 WHERE run_id = $run_id
   AND url_normalized = $url_normalized
   AND a11y_hash = $a11y_hash
-  AND state_hash = $state_hash;  -- auth_state + storage_fingerprint의 해시
+    AND state_hash = $state_hash;  -- auth_state + storage_fingerprint의 해시
 ```
 
 ### 실패한 액션 조회 (Error reporting 평가용)
