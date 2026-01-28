@@ -1,8 +1,9 @@
 """Runs API 라우터"""
 from typing import Dict, Any, Optional
+from uuid import UUID
 from fastapi import APIRouter, HTTPException, Query, Depends
 
-from repositories.run_repository import get_runs_by_user_id
+from repositories.run_repository import get_runs_by_user_id, get_run_by_id
 from dependencies.auth import get_current_user_id
 from utils.logger import get_logger
 
@@ -81,4 +82,49 @@ async def get_runs(
         raise HTTPException(
             status_code=500,
             detail=f"runs 리스트 조회 중 오류가 발생했습니다: {str(e)}"
+        )
+
+
+@router.get("/{run_id}/evaluation-result")
+async def get_evaluation_result(run_id: UUID) -> Dict[str, Any]:
+    """
+    특정 run_id의 평가 결과 JSON을 조회합니다.
+    
+    Args:
+        run_id: 평가 실행 ID
+    
+    Returns:
+        evaluation_result_json (평가 완료된 전체 JSON 결과)
+    """
+    try:
+        # Run 존재 확인
+        run = get_run_by_id(run_id)
+        if not run:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Run을 찾을 수 없습니다: {run_id}"
+            )
+        
+        # evaluation_result_json 조회
+        evaluation_result_json = run.get("evaluation_result_json")
+        
+        if evaluation_result_json is None:
+            raise HTTPException(
+                status_code=404,
+                detail=f"평가 결과를 찾을 수 없습니다. 분석이 아직 완료되지 않았거나 평가 결과가 저장되지 않았습니다."
+            )
+        
+        return {
+            "run_id": str(run_id),
+            "status": run.get("status"),
+            "evaluation_result": evaluation_result_json
+        }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"평가 결과 조회 실패 (run_id: {run_id}): {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"평가 결과 조회 중 오류가 발생했습니다: {str(e)}"
         )

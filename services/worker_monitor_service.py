@@ -264,7 +264,7 @@ class WorkerMonitorService:
         """
         actors = [
             "process_node_worker",
-            "process_action_worker",
+            # "process_action_worker", # Deprecated
             "process_pending_actions_worker"
         ]
         
@@ -357,7 +357,7 @@ class WorkerMonitorService:
         
         actors = [
             "process_node_worker",
-            "process_action_worker",
+            # "process_action_worker", # Deprecated
             "process_pending_actions_worker"
         ]
         
