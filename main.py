@@ -4,6 +4,13 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+# OpenBLAS 스레드 수 제한 (리소스 부족 방지)
+# 환경변수가 설정되지 않은 경우에만 기본값 설정
+if "OPENBLAS_NUM_THREADS" not in os.environ:
+    os.environ["OPENBLAS_NUM_THREADS"] = "1"
+    os.environ["GOTO_NUM_THREADS"] = "1"
+    os.environ["OMP_NUM_THREADS"] = "1"
+
 from routers import monitor, evaluation, runs, nodes
 from middleware.exception_handler import register_exception_handlers
 from utils.logger import setup_logging, get_logger

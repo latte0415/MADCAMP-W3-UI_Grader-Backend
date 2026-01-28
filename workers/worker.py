@@ -7,11 +7,20 @@ Dramatiq 워커 실행 엔트리포인트
 
 환경변수:
 - REDIS_URL: Redis 연결 URL (기본값: redis://localhost:6379/0)
+- DRAMATIQ_THREADS: 워커 스레드 수 (기본값: 2)
+- OPENBLAS_NUM_THREADS: OpenBLAS 스레드 수 (기본값: 1)
 """
 
 import os
 import sys
 from pathlib import Path
+
+# OpenBLAS 스레드 수 제한 (리소스 부족 방지)
+# 환경변수가 설정되지 않은 경우에만 기본값 설정
+if "OPENBLAS_NUM_THREADS" not in os.environ:
+    os.environ["OPENBLAS_NUM_THREADS"] = "1"
+    os.environ["GOTO_NUM_THREADS"] = "1"
+    os.environ["OMP_NUM_THREADS"] = "1"
 
 # 프로젝트 루트를 Python 경로에 추가
 project_root = Path(__file__).parent.parent
@@ -41,6 +50,11 @@ else:
         masked_url = f"redis://***@{parts[-1]}"
     logger.info(f"✓ REDIS_URL 설정됨: {masked_url}")
 
+# 워커 스레드 수 설정 (기본값: 2)
+worker_threads = int(os.getenv("DRAMATIQ_THREADS", "2"))
+logger.info(f"✓ 워커 스레드 수: {worker_threads}")
+logger.info(f"✓ OpenBLAS 스레드 수: {os.getenv('OPENBLAS_NUM_THREADS', '1')}")
+
 # tasks 모듈을 import하여 actor들이 등록되도록 함
 from workers import tasks  # noqa: F401
 from workers import broker  # noqa: F401
@@ -61,8 +75,8 @@ import dramatiq.cli
 if __name__ == "__main__":
     logger.info("Dramatiq CLI 시작")
     # Dramatiq CLI에 필요한 인자 설정
-    # dramatiq broker module 형식으로 실행
-    sys.argv = ["dramatiq", "workers.broker", "workers.tasks"]
+    # dramatiq broker module 형식으로 실행, 스레드 수 제한
+    sys.argv = ["dramatiq", "workers.broker", "workers.tasks", "--threads", str(worker_threads)]
     
     # dramatiq CLI 실행
     try:
