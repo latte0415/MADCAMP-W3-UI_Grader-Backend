@@ -13,7 +13,7 @@ def evaluate_after_action(edge_data: Dict[str, Any], prev_node_data: Dict[str, A
         Control 및 Efficiency 평가 결과가 포함된 딕셔너리.
     """
     results = {
-        "learnability": {"score": 100.0, "passed": [], "failed": []},
+        "learnability": {"score": 0.0, "passed": [], "failed": []},
         "efficiency": {
             "score": 0, 
             "passed": [], 
